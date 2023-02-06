@@ -1,0 +1,12 @@
+name: misidenv
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - xrootd=5.5.1
+  - poetry
+  - mamba
+  - pip:
+  # pip-install packages on available in conda-forge or defaults
+    - pidcalib2

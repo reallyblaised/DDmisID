@@ -1,0 +1,37 @@
+# -------------------------------
+# user-defined configuration file
+# -------------------------------
+
+# pidcalib2 configuration
+# -----------------------
+pid:
+  # common to all particle species and years of data taking
+  # NOTE: take care to specify ranges compatible with the data surviving the nominal event selection
+  
+  # alias : list[float, ...]
+  binning:
+    "P"       : [10_000, 15_000, 20_000, 25_000, 30_000, 35_000, 40_000, 100_000]
+    "ETA"     : [1.5, 3.0, 5.0]
+    "nTracks" : [0, 250, 1000] # checked that this is not used in any trigger/stripping cuts
+  
+  # what species are considered in the makeup of the misID?
+  # NOTE: take care to specify the species alias employed in pidcalib2
+  species: 
+    kaon    : "K"
+    pion    : "Pi"
+    proton  : "P"
+    electron: "e"
+  
+  # year-specific configuration
+  years : ["2016", "2017", "2018"]
+  magpols : ["MagUp", "MagDown"]
+  
+  # !muon ID for hadron-enriched data 
+  antimu_id: "DLLmu<0 && IsMuon==0" 
+
+  # muon ID to select the signal-fit region  
+  mu_id: "_ProbNNghost<0.1 && DLLmu>3 && DLLK<0.0 && DLLp<0.0 && IsMuon==1.0"
+
+  # selection shared between the hadron-enriched and signal samples. Usually 
+  # involving acceptance cuts, and the extrema of the mommentum range established in nominal events selection
+  common_sel: "InMuonAcc==1.0 && nShared==0 && P>10000 && P<100000 && PT>1500"

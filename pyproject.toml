@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "ddmisid"
+version = "0.1.0"
+description = "A data-driven extrapolation of the misID background from a control region in data via the assignment of per-event weights"
+authors = ["Blaise Delaney <blaise.delaney@cern.ch>", "Dan Moise <daniel.razvan.moise@cern.ch>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+numpy = "^1.23.1"
+matplotlib = "^3.5.2"
+pandas = "^1.4.3"
+pyhf = "^0.6.3"
+boost-histogram = "^1.3.1"
+hist = "^2.6.1"
+snakemake = "^7.12.0"
+typing-extensions = "^4.3.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+black = "^22.6.0"
+pre-commit = "^2.20.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
