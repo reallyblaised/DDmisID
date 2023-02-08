@@ -1,9 +1,11 @@
 # -------------------------------
 # user-defined configuration file
 # -------------------------------
+user_id: "bldelane" # CERN user ID for kinit @CERN.CH
 
+# =======================
 # pidcalib2 configuration
-# -----------------------
+# =======================
 pid:
   # common to all particle species and years of data taking
   # NOTE: take care to specify ranges compatible with the data surviving the nominal event selection
@@ -20,18 +22,34 @@ pid:
     kaon    : "K"
     pion    : "Pi"
     proton  : "P"
-    electron: "e"
+    electron: "e_B_Jpsi"
   
   # year-specific configuration
-  years : ["2016", "2017", "2018"]
-  magpols : ["MagUp", "MagDown"]
+  years : ["2016"] #, "2017", "2018"]
+  magpols : ["up", "down"] # follow pidcalib2 syntax
   
+  # PIDCALIB section: adopt pidcalib syntax to extract efficiencies from calibration data
+  # -------------------------------------------------------------------------------------
   # !muon ID for hadron-enriched data 
-  antimu_id: "DLLmu<0 && IsMuon==0" 
+  antimu_id: "DLLmu<0 & IsMuon==0" 
 
   # muon ID to select the signal-fit region  
-  mu_id: "_ProbNNghost<0.1 && DLLmu>3 && DLLK<0.0 && DLLp<0.0 && IsMuon==1.0"
+  mu_id: "_ProbNNghost<0.1 & DLLmu>3 & DLLK<0.0 & DLLp<0.0 & IsMuon==1.0"
 
   # selection shared between the hadron-enriched and signal samples. Usually 
   # involving acceptance cuts, and the extrema of the mommentum range established in nominal events selection
-  common_sel: "InMuonAcc==1.0 && nShared==0 && P>10000 && P<100000 && PT>1500"
+  common_sel: "InMuonAcc==1.0 & probe_NShared==0 & P>10000 & P<100000 & PT>1500" # NOTE: ensure the extrema are compatible with the binning json files
+
+  # pidcalib cuts of HE sample to define the reco partitions
+  reco_cuts:
+    kaon_like      : "_ProbNNghost<0.1 & DLLK>0.0 & (DLLK-DLLp)>0.0 & (DLLK-DLLe)>0.0"
+    pion_like      : "_ProbNNghost<0.1 & DLLK<0.0 & DLLp<0.0 & DLLe<0.0"
+    proton_like    : "_ProbNNghost<0.1 & DLLp>0.0 & (DLLp-DLLK)>0.0 & (DLLp-DLLe)>0.0"
+    electron_like  : "_ProbNNghost<0.1 & DLLe>0.0 & (DLLe-DLLK)>0.0 & (DLLe-DLLp)>0.0"
+  
+  # DATA section: cuts applied to the hadron enriched *data*: the syntax must reflect the branch names in the user-defined ntuple
+  # ---------------------------------------------------------------------------------------------------------------
+  data_cuts:
+    kaon      : "Mu_plus_PIDmu<0 & IsMuon==0 & Mu_plus_ProbNNghost<0.2 & Mu_plus_PIDK>0.0 & (Mu_plus_PIDK-Mu_plus_PIDp)>0.0 & (Mu_plus_PIDK-Mu_plus_PIDe)>0.0"
+    pion      : "Mu_plus_PIDmu<0 & IsMuon==0 & Mu_plus_ProbNNghost<0.2 & Mu_plus_PIDK<0.0 & Mu_plus_PIDp<0.0 & Mu_plus_PIDe<0.0"
+    proton    : "Mu_plus_PIDmu<0 & IsMuon==0 & Mu_plus_ProbNNghost<0.2 & Mu_plus_PIDp>0.0 & (Mu_plus_PIDp-Mu_plus_PIDK)>0.0 & (Mu_plus_PIDp-Mu_plus_PIDe)>0.0"

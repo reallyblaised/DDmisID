@@ -12,24 +12,25 @@ from ddmisid.utils import read_config
 
 _config_path = "config/main.yml"
 
+
 def update_selstr_run2(sel: str, year: str) -> str:
     """Update a nominal selection string with appropriate aliases"""
-    
+
     match year:
         case "_2016" | "_2017" | "_2018":
-            # would love to use match case here
+            # would love to use match case here
             if "PT" in sel:
                 sel = sel.replace("PT", "Brunel_PT")
             if "P" in sel:
                 sel = sel.replace("P", "Brunel_P")
-            if "nTracks" in sel:   
+            if "nTracks" in sel:
                 sel = sel.replace("nTracks", "nTracks_Brunel")
-        
+
         case "_2011" | "_2012" | "_2015":
             pass
-        
+
         case other:
-            raise ValueError("Year identifier not recognised")  
+            raise ValueError("Year identifier not recognised")
 
     return sel
 
@@ -81,16 +82,17 @@ class MCTunings:
 @dataclass(frozen=True, slots=True)
 class BinningVars:
     """Container for binning vars
-   
+
     Attributes
     ----------
         {year_conditions}: str
-    
+
     Methods
     -------
     build
         Builds the pidcalib2 binning dictionary
     """
+
     _2011: str = field(init=False)
     _2012: str = field(init=False)
     _2015: str = field(init=False)
@@ -98,29 +100,28 @@ class BinningVars:
     _2017: str = field(init=False)
     _2018: str = field(init=False)
 
-
     @staticmethod
-    def alias_upater_run2(varlist: list[str,...], year: str) -> list[str,...]:
+    def alias_upater_run2(varlist: list[str, ...], year: str) -> list[str, ...]:
         """Update the list of variables with appropriate aliases"""
-        
+
         match year:
             case "_2016" | "_2017" | "_2018":
-                # would love to use match case here
+                # would love to use match case here
                 if "PT" in varlist:
-                        varlist = list(map(lambda x: x.replace("PT", "Brunel_PT"), varlist))    
+                    varlist = list(map(lambda x: x.replace("PT", "Brunel_PT"), varlist))
                 if "P" in varlist:
-                        varlist = list(map(lambda x: x.replace("P", "Brunel_P"), varlist))    
-                if "nTracks" in varlist:   
-                        varlist = list(map(lambda x: x.replace("nTracks", "nTracks_Brunel"), varlist))    
-            
-            case "_2011" | "_2012" | "_2015":
-                pass
-            
-            case other:
-                raise ValueError("Year identified in BinningVars not recognised")       
-        
-        return varlist 
+                    varlist = list(map(lambda x: x.replace("P", "Brunel_P"), varlist))
+                if "nTracks" in varlist:
+                    varlist = list(
+                        map(lambda x: x.replace("nTracks", "nTracks_Brunel"), varlist)
+                    )
+                return varlist
 
+            case "_2011" | "_2012" | "_2015":
+                return varlist
+
+            case other:
+                raise ValueError("Year identified in BinningVars not recognised")
 
     def build(self) -> None:
         """Populate the dictionary pidcalib binning vars
@@ -130,18 +131,18 @@ class BinningVars:
 
         # read the user config options
         bin_vars = list(read_config(_config_path, key="pid")["binning"].keys())
-       
-        # if require, add pre-/suf-fix to variable aliases
+
+        # if requires, add pre-/suf-fix to variable aliases
         for y in years:
-            self.alias_upater_run2(varlist=bin_vars, year=y)
-        
+            bin_vars = self.alias_upater_run2(varlist=bin_vars, year=y)
+
             # post alias-update, set as attributed of the class
             object.__setattr__(self, y, bin_vars)
 
     def __post_init__(self) -> None:
         self.build()
-        
-        
+
+
 @dataclass(frozen=True, slots=True)
 class CommonCuts:
     """Container dataclass for evt sel cuts
@@ -156,6 +157,7 @@ class CommonCuts:
         Builds the dictionary with PID, kinematic and occupancy criteria
         imposed in the evt selection
     """
+
     _2011: str = field(init=False)
     _2012: str = field(init=False)
     _2015: str = field(init=False)
@@ -163,15 +165,14 @@ class CommonCuts:
     _2017: str = field(init=False)
     _2018: str = field(init=False)
 
-
     def __post_init__(self) -> None:
         """Populate the per-year evt sel cuts
         labelled appropriately depending on the year
-        """ 
+        """
         # read the user config options for the acceptance and kinematics
         # cuts shared between HE and signal samples
-        common_sel = read_config(_config_path, key="pid")["common_sel"] 
-        
+        common_sel = read_config(_config_path, key="pid")["common_sel"]
+
         years = ("_2011", "_2012", "_2015", "_2016", "_2017", "_2018")
         for y in years:
             # establish the common cuts for the given year & assign as class attribute
