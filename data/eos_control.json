@@ -1,0 +1,62 @@
+{
+    "2011": {
+        "data": {
+            "MU": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/data/2011/nTuple_data_mm_2011_MU_Bu2LLK_mmLine_DaVinci_v39r1p1_stripping_v21r1p1.root",
+            "MD": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/data/2011/nTuple_data_mm_2011_MD_Bu2LLK_mmLine_DaVinci_v39r1p1_stripping_v21r1p1.root"
+        },
+        "mc": {
+            "MD": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/mc/2011/controlChannel/nTuple_Bs02PhiJpsiMuMu_MC_2011_MD_Bu2LLKNoPID_mmLine_restripped_DaVinci_v39r1p1_stripping_v21r1p1.root",
+            "MU": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/mc/2011/controlChannel/nTuple_Bs02PhiJpsiMuMu_MC_2011_MU_Bu2LLKNoPID_mmLine_restripped_DaVinci_v39r1p1_stripping_v21r1p1.root",
+        }
+    },
+    "2012": {
+        "data": {
+            "MD": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/data/2012/nTuple_data_mm_2012_MD_Bu2LLK_mmLine_DaVinci_v39r1p1_stripping_v21r0p1.root",
+            "MU": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/data/2012/nTuple_data_mm_2012_MU_Bu2LLK_mmLine_DaVinci_v39r1p1_stripping_v21r0p1.root"
+        },
+        "mc": {
+            "MD": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/mc/2012/controlChannel/nTuple_Bs02PhiJpsiMuMu_MC_2012_MD_Bu2LLKNoPID_mmLine_restripped_DaVinci_v39r1p1_stripping_v21r0p1.root",
+            "MU": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/mc/2012/controlChannel/nTuple_Bs02PhiJpsiMuMu_MC_2012_MU_Bu2LLKNoPID_mmLine_restripped_DaVinci_v39r1p1_stripping_v21r0p1.root"
+        }
+    },
+    "2015": {
+        "data": {
+            "MD": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/data/2015/nTuple_data_mm_2015_MD_Bu2LLK_mmLine_DaVinci_v41r4p5_stripping_v24r1p1.root",
+            "MU": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/data/2015/nTuple_data_mm_2015_MU_Bu2LLK_mmLine_DaVinci_v41r4p5_stripping_v24r1p1.root"
+        },
+        "mc": {
+            "MD": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/mc/2015/controlChannel/nTuple_Bs02PhiJpsiMuMu_MC_2015_MD_Bu2LLKNoPID_mmLine_restripped_DaVinci_v41r4p5_stripping_v24r1p1.root",
+            "MU": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/mc/2015/controlChannel/nTuple_Bs02PhiJpsiMuMu_MC_2015_MU_Bu2LLKNoPID_mmLine_restripped_DaVinci_v41r4p5_stripping_v24r1p1.root"
+        }
+    },
+    "2016": {
+        "data": {
+            "MD": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/data/2016/nTuple_data_mm_2016_MD_Bu2LLK_mmLine_DaVinci_v41r4p5_stripping_v28r1p1.root",
+            "MU": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/data/2016/nTuple_data_mm_2016_MU_Bu2LLK_mmLine_DaVinci_v41r4p5_stripping_v28r1p1.root"
+        },
+        "mc": {
+            "MD": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/mc/2016/controlChannel/nTuple_Bs02PhiJpsiMuMu_MC_2016_MD_Bu2LLKNoPID_mmLine_restripped_DaVinci_v41r4p5_stripping_v28r1p1.root",
+            "MU": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/mc/2016/controlChannel/nTuple_Bs02PhiJpsiMuMu_MC_2016_MU_Bu2LLKNoPID_mmLine_restripped_DaVinci_v41r4p5_stripping_v28r1p1.root"
+        }
+    },
+    "2017": {
+        "data": {
+            "MD": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/data/2017/nTuple_data_mm_2017_MD_Bu2LLK_mmLine_DaVinci_v42r7p2_stripping_v29r2.root",
+            "MU": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/data/2017/nTuple_data_mm_2017_MU_Bu2LLK_mmLine_DaVinci_v42r7p2_stripping_v29r2.root"
+        },
+        "mc": {
+            "MD": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/mc/2017/controlChannel/nTuple_Bs02PhiJpsiMuMu_MC_2017_MD_Bu2LLKNoPID_mmLine_restripped_DaVinci_v42r7p2_stripping_v29r2.root",
+            "MU": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/mc/2017/controlChannel/nTuple_Bs02PhiJpsiMuMu_MC_2017_MU_Bu2LLKNoPID_mmLine_restripped_DaVinci_v42r7p2_stripping_v29r2.root"
+        }
+    },
+    "2018": {
+        "data": {
+            "MD": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/data/2018/nTuple_data_mm_2018_MD_Bu2LLK_mmLine_DaVinci_v44r4_stripping_v34.root",
+            "MU": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/data/2018/nTuple_data_mm_2018_MU_Bu2LLK_mmLine_DaVinci_v44r4_stripping_v34.root"
+        },
+        "mc": {
+            "MD": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/data/2018/controlChannel/nTuple_Bs02PhiJpsiMuMu_MC_2018_MD_Bu2LLKNoPID_mmLine_restripped_DaVinci_v42r7p2_stripping_v29r2.root",
+            "MU": "root://eoslhcb.cern.ch//eos/lhcb/wg/RD/B2Xemu/nTuple/data/2018/controlChannel/nTuple_Bs02PhiJpsiMuMu_MC_2018_MU_Bu2LLKNoPID_mmLine_restripped_DaVinci_v42r7p2_stripping_v29r2.root"
+        }
+    }
+}
