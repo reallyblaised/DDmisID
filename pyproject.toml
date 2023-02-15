@@ -18,8 +18,9 @@ typing-extensions = "^4.3.0"
 termcolor2 = "^0.0.3"
 uproot = "^5.0.2"
 SciencePlots = "^2.0.1"
-iminuit = "^2.19.0"
+iminuit = "2.20"
 sweights = "^1.0.0"
+numba = "^0.56.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
