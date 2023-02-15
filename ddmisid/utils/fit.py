@@ -5,154 +5,69 @@ __email__ = "blaise.delaney at mit.edu"
 
 from typing import Any
 from numpy.typing import ArrayLike
-from numba_stats import norm, truncexpon
+from scipy.stats import expon
 from collections.abc import Callable
 import warnings
+from termcolor2 import c as tc
+import numpy as np
+from .models import dcbwg, dcbwg_cdf
 
 
 # commonly used fit models
 # ------------------------
-def simple_twoclass_model(
-    mrange: tuple[float, float],
-) -> Callable:
-    """Closure to specify the fitting range for the model.
+def make_expon(
+    mrange: ArrayLike, lb: float, x: ArrayLike
+) -> tuple[Callable, Callable, Callable]:
+    """Generate the exponential pdf and cdf for the combinatorial background
 
     Parameters
     ----------
-    mrange: tuple[float, float]
-        Range of the fitted variable (typically invariant mass)
+    mrange : ArrayLike
+        The observation interval considered in the fit
+
+    lb: float
+        The lambda parameter of the exponential
+
+    x: ArrayLike
+        The datapoints at which the pdf and cdf are evaluated
 
     Returns
     -------
-    Callable
-        Two-class model for unbinned maximum-likelihood fits
+    expon_pdf: ArrayLike
+        The exponential pdf evaluated at x
+
+    expon_cdf: ArrayLike
+        The exponential cdf evaluated at mrange
+
+    norm_expon_pdf: ArrayLike
+        The normalised exponential pdf evaluated across the observational interval; serves to appropriately combined pdf components in a mixture model.
     """
+    _expon = lambda low_m_edge, lb: expon(low_m_edge, lb)
 
-    def _simple_twoclass_model(
-        x: ArrayLike,
-        ns: int,
-        nb: int,
-        mu: float,
-        sg: float,
-        lb: float,
-    ) -> tuple[int, Any]:
-        """Simple model for fitting.
-        The total pdf is given the mixture of a gaussian (signal)
-        and an exponential (background).
+    expon_pdf = _expon.pdf(x)
+    expon_cdf = _expon.cdf(mrange)
+    norm_expon_pdf = expon_pdf / np.diff(expon_cdf)
 
-        This is a template model for extended unbinned maximum likelihood fits.
-
-        Parameters
-        ----------
-        ns: int
-            Number of signal candidates
-        nb: int
-            Number of background candidates
-        mu: float
-            Mean of the signal gaussian
-        sg: float
-            Standard deviation of the signal gaussian
-        lb: float
-            Lambda of the background exponential
-
-        Returns
-        -------
-        tuple[int, Any]
-            The abundance of sig and bkg, and joint pdf
-        """
-        return ns + nb, ns * norm.pdf(x, mu, sg) + nb * truncexpon.pdf(
-            x, *mrange, 0, lb
-        )
-
-    return _simple_twoclass_model
+    return expon_pdf, expon_cdf, norm_expon_pdf
 
 
-def simple_comb_model(
+def expon_factory(key: str) -> Callable:
+    """Factory for the exponential pdf, cdf and normalised pdf"""
+
+    match key:
+        case "pdf":
+            return lambda mrange, lb, x: make_expon(mrange, lb, x)[0]
+        case "cdf":
+            return lambda mrange, lb, x: make_expon(mrange, lb, x)[1]
+        case "norm_pdf":
+            return lambda mrange, lb, x: make_expon(mrange, lb, x)[2]
+        case other:
+            raise ValueError(f"Invalid key: {key}")
+
+
+def pdf_factory(
     mrange: tuple[float, float],
-) -> Callable:
-    """Closure to specify the fitting range for the model.
-
-    Parameters
-    ----------
-    mrange: tuple[float, float]
-        Range of the fitted variable (typically invariant mass)
-
-    Returns
-    -------
-    Callable
-        Model for the combinatorial bkg component in unbinned maximum-likelihood fits
-    """
-
-    def _simple_comb_model(
-        x: ArrayLike,
-        nb: int,
-        lb: float,
-    ) -> tuple[int, Any]:
-        """Simple model for fitting, amounting to a (truncated) exponential pdf.
-
-        This is a template model for extended unbinned maximum likelihood fits.
-
-        Parameters
-        ----------
-        nb: int
-            Number of background candidates
-        lb: float
-            Lambda of the background exponential
-
-        Returns
-        -------
-        tuple[int, Any]
-            The abundance of bkg, and pdf
-        """
-        return nb, nb * truncexpon.pdf(x, *mrange, 0, lb)
-
-    return _simple_comb_model
-
-
-def simple_signal_model() -> Callable:
-    """Dummy closure to return the gaussian pdf for the signal; the closure keeps syntax consistent with other models.
-
-    Parameters
-    ----------
-
-    Returns
-    -------
-    Callable
-        Model for the signal component in unbinned maximum-likelihood fits
-    """
-
-    def _simple_signal_model(
-        x: ArrayLike,
-        ns: int,
-        mu: float,
-        sg: float,
-    ) -> tuple[int, Any]:
-        """Simple model for signal fitting, amounting to a gaussian pdf.
-
-        This is a template model for extended unbinned maximum likelihood fits.
-
-        Parameters
-        ----------
-        ns: int
-            Number of signal candidates
-        mu: float
-            Mean of the signal gaussian
-        sg: float
-            Standard deviation of the signal gaussian
-
-        Returns
-        -------
-        tuple[int, Any]
-            The abundance of sig, and datal
-        """
-        return ns, ns * norm.pdf(x, mu, sg)
-
-    return _simple_signal_model
-
-
-def SimpleModelFactory(
-    mrange: tuple[float, float],
-    components: tuple[str, ...] | str = ("total"),
+    key: tuple[str, ...] | str,
 ) -> Callable:
     """Factory method to select the desired simple model in the fit.
 
@@ -162,22 +77,54 @@ def SimpleModelFactory(
         Range of the fitted variable (typically invariant mass)
 
     components: tuple[str, ...] | str
-        Names of the components in the model (default: ('sig', 'bkg'))
+        Names of the components in the model
 
     Returns
     -------
-    Callable[P, R]
-        Simple model for unbinned maximum-likelihood fits
+    Callable
+        Model for unbinned maximum-likelihood fits
     """
-    match components:
+    match key:
         case None:
             raise TypeError("Please specify at least one component identifier [str]")
-        case "signal":
-            return simple_signal_model()  # no need to specify the mrange here
-        case "comb":
-            return simple_comb_model(mrange)
-        case "total" | ("signal", "comb"):
-            return simple_twoclass_model(mrange)
+        case "signal":  # mixture of two one-sided crystal ball functions and a gaussian
+            return lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr: dcbwg(
+                x, f1, f2, mug, mug, mug, sgg, sgl, sgr, al, ar, nl, nr, mrange
+            )
+        case "combinatorial":
+            return lambda expon: expon_factory(key="norm_pdf")
+        case _:
+            raise ValueError("Invalid component identifier(s)")
+
+
+def cdf_factory(
+    mrange: tuple[float, float],
+    key: tuple[str, ...] | str,
+) -> Callable:
+    """Factory method to select the desired model cdf.
+
+    Parameters
+    ----------
+    mrange: tuple[float, float]
+        Range of the fitted variable (typically invariant mass)
+
+    components: tuple[str, ...] | str
+        Names of the components in the model
+
+    Returns
+    -------
+    Callable
+        Model cdf evaluated across the mrange
+    """
+    match key:
+        case None:
+            raise TypeError("Please specify at least one component identifier [str]")
+        case "signal":  # mixture of two one-sided crystal ball functions and a gaussian
+            return lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr: dcbwg_cdf(
+                x, f1, f2, mug, mug, mug, sgg, sgl, sgr, al, ar, nl, nr, mrange
+            )
+        case "combinatorial":
+            return lambda expon: expon_factory(key="cdf")
         case _:
             raise ValueError("Invalid component identifier(s)")
 
@@ -188,12 +135,23 @@ class SanityChecks:
     def __init__(self, mi):
         self.mi = mi  # Minuit object
 
-    def __call__(self, args):
+    def __call__(self):
         """Perform the sanity checks with the Minuit object"""
 
-        assert self.mi.fmin.is_valid, "Minuit fmin is not valid"
-        assert (
-            self.mi.fmin.has_accurate_covar
-        ), "Minuit fmin does not have accurate covariance matrix"
+        # fmin is valid
+        try:
+            assert self.mi.fmin.is_valid
+            print(tc("Minuit fmin is valid", "green"))
+        except:
+            print(tc("Minuit fmin is NOT valid", "red"))
+
+        # covariance matrix is accurate
+        try:
+            assert self.mi.fmin.has_accurate_covar
+            print(tc("Minuit fmin has accurate covariance matrix").green)
+        except:
+            print(tc("Minuit fmin does not have accurate covariance matrix").red)
+
+        # warn if parameters are at limit
         if self.mi.fmin.has_parameters_at_limit is True:
-            warnings.warn("Minuit fmin has parameters at limit")
+            print(tc("Warning: Minuit fmin has parameters at limit").yellow)

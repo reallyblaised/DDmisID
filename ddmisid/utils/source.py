@@ -46,7 +46,7 @@ def timing(func: Callable[P, T]) -> Callable[P, T]:
         value = func(*args, **kwargs)
         end_time = time.perf_counter()  # 2
         run_time = end_time - start_time  # 3
-        print(tc(f"Success: finished {func.__name__!r} in {run_time:.4f} secs\n").green)
+        print((f"{func.__name__!r} execution completed in {run_time:.4f} secs\n"))
         return value
 
     return wrapper_timer
@@ -122,10 +122,10 @@ def load_ntuple(
 
 
 def load_root(
-    file: str,
+    file_path: str,
     library: str,
     branches: list[str] | None = None,
-    cut: list[str] | None = None,
+    cut: list[str] | str | None = None,
     name: str | None = None,
     max_entries: int | None = None,
     batch_size: str | None = "200 MB",
