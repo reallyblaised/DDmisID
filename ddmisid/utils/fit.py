@@ -129,6 +129,25 @@ def cdf_factory(
             raise ValueError("Invalid component identifier(s)")
 
 
+def model_factory(mrange: ArrayLike, key: tuple[str, ...] | str) -> Callable:
+    """Factory method to select the desired model."""
+    match key:
+        case "twoclass":
+            print(
+                "Booking mixture model of 2CB+Gauss (signal) and exponential (combinatorial)"
+            )
+            model = lambda x, sig_yield, comb_yield, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr, lb: sig_yield * dcbwg(
+                x, f1, f2, mug, mug, mug, sgg, sgl, sgr, al, ar, nl, nr, mrange
+            ) + comb_yield * expon_factory(
+                key="norm_pdf"
+            )(
+                mrange, lb, x
+            )
+            return model
+        case _:
+            raise ValueError("Invalid model identifier")
+
+
 # verify correctness of the fit
 # -----------------------------
 class SanityChecks:

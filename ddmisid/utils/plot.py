@@ -11,10 +11,20 @@ import hist
 from numpy.typing import ArrayLike
 import numpy as np
 from pathlib import Path
-from .fit import SimpleModelFactory
 from typing import Any
+import mplhep as hep
 
 plt.style.use("science")
+
+# custom color map
+import matplotlib as mpl
+
+mpl.rcParams["axes.prop_cycle"] = mpl.cycler(
+    color=["#0c2c84", "#225ea8", "#1d91c0", "#41b6c4", "#7fcdbb", "#c7e9b4", "#ffffcc"]
+)
+
+# software version
+VERSION = "0.1"
 
 # plot a fitted model
 # -------------------
@@ -118,15 +128,15 @@ class VisualizerFactory:
 # fig, ax factory functions
 # -------------------------
 def simple_ax(
-    title: str = "LHCb Unofficial",
+    title: str | None = "LHCb Unofficial",
     ylabel: str = "Candidates",
     normalised: bool = False,
-) -> tuple[plt.Axes, plt.Axes]:
+) -> tuple[Any, plt.Axes]:
     """Book simple ax
 
     Parameters
     ----------
-    title: str
+    title: str | None
         Title of the plot (default: 'LHCb Unofficial')
 
     ylabel: str
@@ -137,14 +147,23 @@ def simple_ax(
 
     Returns
     -------
-    tuple[Callable, Callable]
-        Fig, Ax plt.Axes objects
+    tuple[Any, Callable]
+        Fig, ax plt.Axes objects
     """
     fig, ax = plt.subplots()
 
-    ax.set_title(title)
+    ax.set_title(title, loc="right")
     ax.set_ylabel(ylabel)
-
+    # logo
+    ax.text(
+        0.0,
+        1.07,
+        r"\textbf{DD}\textit{mis}ID \texttt{v" + VERSION + "}",
+        ha="left",
+        va="top",
+        transform=ax.transAxes,
+        color="grey",
+    )
     return fig, ax
 
 
@@ -175,6 +194,52 @@ def save_to(
 
 # plot data and pdfs
 # ------------------
+def fill_hist_w(
+    data: ArrayLike, bins: int, range: tuple, weights: ArrayLike | None
+) -> tuple[Any, ...]:
+    """Fill histogram accounting weights
+
+    Parameters
+    ----------
+    data: ArrayLike
+        Data to be histogrammed
+    bins: int
+        Number of bins
+    range: tuple
+        Range of the histogram
+    weights: ArrayLike | None
+        Weights to be applied to the data (default: None)
+
+    Returns
+    -------
+    nh: ArrayLike
+        Bin contents
+    xe: ArrayLike
+        Bin edges
+    xc: ArrayLike
+        Bin centers
+    nh_err: ArrayLike
+        Bin errors
+    """
+    # bin contents, bin edges, bin centers
+    nh, xe = np.histogram(data, bins=bins, range=range)
+    xc = 0.5 * (xe[1:] + xe[:-1])
+
+    # if no weights, Poisson errors
+    nh_err = nh**0.5
+
+    # if weights, careful treatment of bin contents and errors via boost-histogram
+    # https://www.zeuthen.desy.de/~wischnew/amanda/discussion/wgterror/working.html
+    if weights is not None:
+        whist = bh.Histogram(bh.axis.Regular(bins, *range), storage=bh.storage.Weight())
+        whist.fill(data, weight=weights)
+        cx = whist.axes[0].centers
+        nh = whist.view().value
+        nh_err = whist.view().variance ** 0.5
+
+    return nh, xe, xc, nh_err
+
+
 def plot_data(
     data: ArrayLike,
     ax: plt.Axes,
@@ -182,7 +247,8 @@ def plot_data(
     bins: int = 50,
     weights: ArrayLike | None = None,
     label: str | None = None,
-    color: str | None = "black",
+    norm: bool = False,
+    **kwargs: Any,
 ) -> None:
     """Plot the data, accounting for weights if provided
 
@@ -206,23 +272,23 @@ def plot_data(
     label: str | None
         Legend label for the data (default: None)
 
-    color: str | None
-        Color for the datapoints (default: black)
+    kwargs: Any
+        Keyword arguments to be passed to the errorbar plot
+
+    norm: bool
+        If true, normalise the data to unit area (default: False)
 
     Returns
     -------
     None
         Plots the data on the axes
     """
-    nh, xe = np.histogram(data, bins=bins, range=range)
-    cx = 0.5 * (xe[1:] + xe[:-1])
-    err = nh**0.5
-    if weights is not None:
-        whist = bh.Histogram(bh.axis.Regular(bins, *range), storage=bh.storage.Weight())
-        whist.fill(data, weight=weights)
-        cx = whist.axes[0].centers
-        nh = whist.view().value
-        err = whist.view().variance ** 0.5
+    nh, xe, cx, err = fill_hist_w(data, bins, range, weights)
+
+    # normalise to unity
+    if norm:
+        nh = nh / np.sum(nh)
+        err = err / np.sum(nh)
 
     ax.errorbar(
         cx,
@@ -230,7 +296,105 @@ def plot_data(
         yerr=err,
         xerr=(xe[1] - xe[0]) / 2,
         label=label,
-        color=f"{color}",
         fmt=".",
         markersize=3,
+        **kwargs,
+    )
+
+
+def hist_err(
+    data: ArrayLike,
+    ax: plt.Axes,
+    range: tuple[float, float],
+    bins: int = 50,
+    weights: ArrayLike | None = None,
+    label: str | None = None,
+    norm: bool = False,
+    **kwargs,
+) -> None:
+    """Wrapper for mplhep histplot method
+
+    Paramaters
+    ----------
+    nh: ArrayLike
+        Histogram bin contents
+    xe: ArrayLike
+        Histogram bin edges
+    ax: plt.Axes
+        Axes to plot on
+    label: str | None
+        Legend label for the data (default: None)
+    kwargs: Any
+        Keyword arguments to be passed to the errorbar plot
+    yerr: ArrayLike | None
+        Error for the histogram bin contents (default: None)
+    norm: bool
+        If true, normalise the data to unit area (default: False)
+
+    Returns
+    -------
+    None
+        Plots the histogram on the axes with errorbars, if not None
+    """
+    nh, xe, xc, err = fill_hist_w(data, bins, range, weights)
+
+    # normalise to unity
+    if norm is True:
+        nh = nh / np.sum(nh)
+        err = err / np.sum(nh)
+
+    hep.histplot(nh, xe, yerr=err, ax=ax, label=label, **kwargs)
+
+
+def hist_step_fill(
+    data: ArrayLike,
+    range: tuple,
+    ax: plt.Axes,
+    bins: int = 50,
+    weights: ArrayLike | None = None,
+    label: str | None = None,
+    norm: bool = False,
+    **kwargs,
+) -> None:
+    """Histogram with shaded area
+
+    Paramaters
+    ----------
+    x: ArrayLike
+        Bin centers
+    y: ArrayLike
+        Bin population
+    ax: plt.Axes
+        Axes to plot on
+    label: str | None
+        Legend label for the data (default: None)
+    kwargs: Any
+        Keyword arguments to be passed to the errorbar plot
+    yerr: ArrayLike | None
+        Error for the histogram bin contents (default: None)
+    norm: bool
+        If true, normalise the data to unit area (default: False)
+
+    Returns
+    -------
+    None
+        Plots the histogram on the axes with errorbars, if not None
+    """
+    nh, xe, xc, err = fill_hist_w(data, bins, range, weights)
+
+    # normalise to unity
+    if norm is True:
+        nh = nh / np.sum(nh)
+        err = err / np.sum(nh)
+
+    hep.histplot(nh, xe, yerr=err, ax=ax, **kwargs)
+    lo_y = nh - err
+    ax.bar(
+        xc,
+        bottom=lo_y,
+        height=err * 2,
+        alpha=0.33,
+        width=xe[1] - xe[0],
+        label=label,
+        **kwargs,
     )

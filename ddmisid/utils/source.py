@@ -89,8 +89,8 @@ def read_config(
 @timing
 def load_ntuple(
     file_path: str,
-    key: str,
-    tree_name: str = "DecayTree",
+    key: str | None = None,
+    tree_name: str | None = None,
     branches: list[str] | None = None,
     library: str = "ak",  # default to awkward
     cut: list[str] | str | None = None,
@@ -104,9 +104,10 @@ def load_ntuple(
     if ext == ".pkl":
         df = pd.read_pickle(file_path)
     elif ext == ".root":
-        file_tree_path = f"{file_path}:{key}/{tree_name}"
         df = load_root(
-            file=file_tree_path,
+            file_path=file_path,
+            key=key,
+            tree_name=tree_name,
             library=library,
             branches=branches,
             cut=cut,
@@ -124,6 +125,8 @@ def load_ntuple(
 def load_root(
     file_path: str,
     library: str,
+    key: str | None = None,
+    tree_name: str | None = None,
     branches: list[str] | None = None,
     cut: list[str] | str | None = None,
     name: str | None = None,
@@ -133,7 +136,10 @@ def load_root(
 ) -> pd.DataFrame:
     """Wrapper for uproot.iterate() to load ROOT files into a pandas DataFrame"""
 
-    events = uproot.open(f"{file}")
+    if key is not None:
+        events = uproot.open(f"{file_path}:{key}/{tree_name}")
+    else:
+        events = uproot.open(f"{file_path}:{tree_name}")
 
     # if pandas, batch and concatenate
     if library == "pd":
