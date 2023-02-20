@@ -174,6 +174,7 @@ def simple_ax(
 def make_legend(
     ax: plt.Axes,
     on_plot: bool = True,
+    ycoord: float = -0.6,
 ) -> None:
     """
     Place the legend below the plot, adjusting number of columns
@@ -185,6 +186,9 @@ def make_legend(
 
     on_plot: bool
         If true, place the legend on the plot (default: True)
+
+    ycoord: float
+        Y-coordinate of the legend (default: -0.6)
 
     Returns
     -------
@@ -205,7 +209,7 @@ def make_legend(
     ax.legend(loc="best")
     if on_plot is False:
         ax.legend(
-            bbox_to_anchor=(0.5, -0.6),
+            bbox_to_anchor=(0.5, ycoord),
             loc="lower center",
             ncol=ncols,
             frameon=False,
@@ -447,4 +451,65 @@ def hist_step_fill(
         width=xe[1] - xe[0],
         label=label,
         **kwargs,
+    )
+
+
+def eff_plot(
+    x: ArrayLike,
+    eff: Any,
+    eff_err: Any,
+    xerr: Any,
+    label: str | None,
+    ax: plt.Axes,
+    fmt: str = ".",
+    markersize: int = 5,
+    draw_band: bool = True,
+    **kwargs,
+) -> None:
+    """Efficiency plot with shaded error bands
+
+    Parameters
+    ----------
+    x: ArrayLike
+        Bin centers
+    eff: Any
+        Efficiency values
+    eff_err: Any
+        Efficiency errors
+    label: str | None
+        Legend label for the data (default: None)
+    ax: plt.Axes
+        Axes to plot on
+    fmt: str
+        Format of the plot (default: '.')
+    markersize: int
+        Size of the markers (default: 5)
+    draw_band: bool
+        If true, draw shaded error band (default: True)
+
+    Returns
+    -------
+    None
+        Plots the efficiency on the axes, with error band if draw_band is True
+    """
+    # quote in percentage
+    eff = eff * 100.0
+    eff_err = eff_err * 100.0
+
+    if draw_band is True:
+        _xerr = 0
+        ax.fill_between(
+            x, eff - eff_err, eff + eff_err, alpha=0.25, linewidth=0, **kwargs
+        )
+    else:
+        _xerr = xerr
+
+    ax.errorbar(
+        x=x,
+        y=eff,
+        yerr=eff_err,
+        xerr=_xerr,
+        label=label,
+        fmt=fmt,
+        markersize=markersize,
     )

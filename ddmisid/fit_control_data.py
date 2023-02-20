@@ -16,6 +16,9 @@ from ddmisid.utils import (
     SanityChecks,
     pdf_factory,
     composite_pdf_factory,
+    composite_cdf_factory,
+    twoclass_cdf,
+    twoclass_pdf,
 )  # fitting
 from ddmisid.utils import load_ntuple, load_root  # I/O
 from ddmisid.utils import (
@@ -27,6 +30,7 @@ from ddmisid.utils import (
     hist_step_fill,
     fill_hist_w,
     make_legend,
+    eff_plot,
 )  # plotting
 import numpy as np
 from typing import Callable, Any
@@ -34,6 +38,27 @@ from uncertainties import ufloat
 from scipy.stats import expon
 from numpy.typing import ArrayLike
 from functools import partial
+
+# efficiency error calculation
+def eff_err(n_pass: int, n_tot: int) -> float:
+    """Efficiency error calculation.
+    Source: https://lss.fnal.gov/archive/test-tm/2000/fermilab-tm-2286-cd.pdf (eq. 2)
+
+    Parameters
+    ----------
+    n_pass: int
+        Number of events passing the selection
+
+    n_tot: int
+        Total number of events
+
+    Returns
+    -------
+    float
+        Efficiency error
+    """
+    return np.sqrt(n_pass * (1 - n_pass / n_tot)) / n_tot
+
 
 # template for the event selection: simpe
 data_selection = (
@@ -130,6 +155,7 @@ if __name__ == "__main__":
     # minimise and error estimation
     mi.migrad()
     mi.hesse()
+    print(mi.params)
 
     # sanity checks
     SanityChecks(mi)()
@@ -154,9 +180,10 @@ if __name__ == "__main__":
     )
     # cosmetics & save
     ax.legend()
-    ax.set_yscale("log")
-    ax.set_xlabel(r"$m(J/\psi \, K^+)$ [MeV$/c^2$]")
-    save_to(outdir="test_plots", name="test")
+    for scale in ("linear", "log"):
+        ax.set_yscale(scale)
+        ax.set_xlabel(r"$m(J/\psi \, K^+)$ [MeV$/c^2$]")
+        save_to(outdir="test_plots", name=f"test_y{scale}")
 
     # save the mc fit pars
     mc_postfit_pars = {}
@@ -345,46 +372,65 @@ if __name__ == "__main__":
     # generate a composite model for the fit:
     # - signal: 2CB + gauss
     # - combinatorial: exp
-    data_model = composite_pdf_factory(
-        mrange=MRANGE,
-        key="twoclass",
-    )
+    # data_model = composite_pdf_factory(
+    #     mrange=MRANGE,
+    #     key="twoclass",
+    # )
+    data_model_pdf = pdf_factory(mrange=MRANGE, key="signal")
+    data_model_cdf = cdf_factory(mrange=MRANGE, key="signal")
 
     nh, xe = np.histogram(DATA.B_M, bins=FIT_BINS, range=MRANGE)
-    cost_obj = cost.ExtendedBinnedNLL(nh, xe, data_model)
+    cost_obj = cost.BinnedNLL(nh, xe, data_model_cdf)
     mi = Minuit(
         cost_obj,
         f1=mc_postfit_pars["f1"].n,
         f2=mc_postfit_pars["f2"].n,
-        mug=6275,  # shared mean
-        sgg=20,
-        sgl=20,
-        sgr=20,
+        mug=5270,
+        sgg=mc_postfit_pars["sgg"].n,
+        sgl=mc_postfit_pars["sgl"].n,
+        sgr=mc_postfit_pars["sgl"].n,
         al=mc_postfit_pars["al"].n,
         ar=mc_postfit_pars["ar"].n,
         nl=mc_postfit_pars["nl"].n,
         nr=mc_postfit_pars["nr"].n,
-        lb=himass_postfit_pars["lb"].n,
-        sig_yield=0.98 * len(DATA["B_M"]),
-        comb_yield=0.2 * len(DATA["B_M"]),
+        # lb=himass_postfit_pars["lb"].n,
+        # sig_yield=0.98 * len(DATA["B_M"]),
+        # comb_yield=0.2 * len(DATA["B_M"]),
     )
 
     # define the parameter ranges
-    mi.limits["sig_yield"] = (0, len(DATA.B_M))
-    mi.limits["comb_yield"] = (0, len(DATA.B_M))
+    # mi.limits["sig_yield"] = (0, len(DATA.B_M))
+    # mi.limits["comb_yield"] = (0, len(DATA.B_M))
     mi.limits["mug"] = (5200, 5400)
     mi.limits["sgg"] = (0, 100)
     mi.limits["sgl"] = (0, 100)
     mi.limits["sgr"] = (0, 100)
+    mi.limits["nl"] = (0, 10)
+    mi.limits["nr"] = (0, 10)
+    mi.limits["al"] = (0, 10)
+    mi.limits["ar"] = (0, 10)
+    # mi.limits["lb"] = (0, 500)
 
     # fix the parameters taken from MC/upper-mass fits
-    _fixed = ("f1", "f2", "al", "ar", "nl", "nr", "lb")
+    _fixed = (
+        "f1",
+        "f2",
+        "al",
+        "ar",
+        "nl",
+        "nr",
+        # "sgl",
+        # "sgr",
+        # "sgg",
+        # "lb",
+    )
     for fixpar in _fixed:
         mi.fixed[fixpar] = True
 
     # minimise and error estimation
     mi.migrad()
     mi.hesse()
+    print(mi.params)
 
     # sanity checks
     SanityChecks(mi)()
@@ -402,14 +448,106 @@ if __name__ == "__main__":
         label="Data 2016",
     )
 
-    # plot the total pdf
+    # # plot the total pdf
     # _norm = (MRANGE[1] - MRANGE[0]) / PLOT_BINS
-    _norm = (6000 - 5000) / PLOT_BINS
     # _x = np.linspace(*MRANGE, PLOT_BINS)
-    _x = np.linspace(5000, 6000, PLOT_BINS)
-    viz_signal(x=_x, y=_norm * data_model(_x, *mi.values), ax=ax)(label="Fit")
+    # viz_signal(x=_x, y=_norm * data_model(_x, *mi.values), ax=ax)(label="Fit") # # plot the total pdf
+    # _norm = (MRANGE[1] - MRANGE[0]) / PLOT_BINS
+    # _x = np.linspace(*MRANGE, PLOT_BINS)
+    # viz_signal(x=_x, y=_norm * data_model(_x, *mi.values), ax=ax)(label="Fit")
+
+    # fit model; handle the norm of the pdf
+    nhp, _ = np.histogram(DATA.B_M, range=MRANGE, bins=PLOT_BINS)
+    _norm = np.sum(nhp) * (MRANGE[1] - MRANGE[0]) / PLOT_BINS
+    _x = np.linspace(*MRANGE, PLOT_BINS)
+    viz_signal(x=_x, y=_norm * data_model_pdf(_x, *mi.values), ax=ax)(label="Fit")
 
     # cosmetics & save
     ax.legend()
-    ax.set_xlabel(r"$m(J/\psi \, K^+)$ [MeV$/c^2$]")
-    save_to(outdir="test_plots", name="test_data")
+    for scale in ("linear", "log"):
+        ax.set_yscale(scale)
+        ax.set_xlabel(r"$m(J/\psi \, K^+)$ [MeV$/c^2$]")
+        save_to(outdir="test_plots", name=f"test_data_y{scale}")
+
+    # ==============================================================================
+    #                               sFit / COWs section
+    # ==============================================================================
+    # fill histogram
+
+    # mc
+    # --
+    # load the mc, with appropriate truthmatching
+    mc_ghost_sel = f"{data_selection(MASS_MIN, MASS_MAX)} \
+        & (K_TRUEID == 0)"
+    mc_ghosts = load_ntuple(
+        file_path=f"root://eoslhcb.cern.ch/{args.sim}",
+        key="B2DsMuNuTuple",
+        tree_name="DecayTree",
+        max_entries=-1,
+        branches=BRANCHES
+        + [
+            "K_TRUEID",
+            "B_TRUEID",
+            "K_MC_MOTHER_ID",
+        ],
+        cut=mc_ghost_sel,
+    )
+    sden_nh, sden_xe, sden_xc, _ = fill_hist_w(
+        data=mc_ghosts.K_PT,
+        bins=5,
+        range=(0, 1e4),
+        weights=None,
+    )
+    snum_nh, _, _, _ = fill_hist_w(
+        data=mc_ghosts[mc_ghosts.K_PIDmu > 3].K_PT,
+        bins=5,
+        range=(0, 1e4),
+        weights=None,
+    )
+
+    mc_eff = snum_nh / sden_nh
+    mc_eff_err = eff_err(n_pass=snum_nh, n_tot=sden_nh)
+
+    # data
+    # ----
+    dden_nh, dden_xe, dden_xc, dden_nh_err = fill_hist_w(
+        data=DATA[DATA.K_TRACK_MatchCHI2 > 30].K_PT,
+        bins=5,
+        range=(0, 1e4),
+        weights=None,
+    )
+    dnum_nh, dnum_xe, dnum_xc, dnum_nh_err = fill_hist_w(
+        data=DATA[(DATA.K_TRACK_MatchCHI2 > 30) & (DATA.K_PIDmu > 3)].K_PT,
+        bins=5,
+        range=(0, 1e4),
+        weights=None,
+    )
+
+    data_eff = dnum_nh / dden_nh
+    data_eff_err = eff_err(n_pass=dnum_nh, n_tot=dden_nh)
+
+    # eff plot
+    # --------
+    fig, ax = simple_ax()
+    eff_plot(
+        x=sden_xc,
+        eff=mc_eff,
+        eff_err=mc_eff_err,
+        xerr=(sden_xe[1] - sden_xe[0]) / 2,
+        label="MC TRUEID$(K)=0$",
+        ax=ax,
+    )
+    eff_plot(
+        x=dden_xc,
+        eff=data_eff,
+        eff_err=data_eff_err,
+        xerr=(dden_xe[1] - dden_xe[0]) / 2,
+        label="Data track-match $\chi^2>30$",
+        ax=ax,
+    )
+    make_legend(ax=ax, on_plot=False, ycoord=-0.4)
+    ax.set_ylabel(
+        r"$\varepsilon($DLL$_{\mu}>3)~[\%]$"
+    )  # supersedes the label in simple_ax
+    ax.set_xlabel(r"$p_{T}$ [MeV/$c$]")
+    save_to(outdir="test_plots", name=f"data_eff_test")

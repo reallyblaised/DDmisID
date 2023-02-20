@@ -84,8 +84,6 @@ def twoclass_pdf(
     f1: float,
     f2: float,
     mug: float,
-    mul: float,
-    mur: float,
     sgg: float,
     sgl: float,
     sgr: float,
@@ -95,8 +93,8 @@ def twoclass_pdf(
     nr: float,
     lb: float,
     mrange: tuple[float, float] | ArrayLike,
-    sig_yield: int,
-    comb_yield: int,
+    # sig_yield: int,
+    # comb_yield: int,
 ) -> Any:
     """Generate a mixture of pdfs, suitably normalised, to fit a realistic mass spectrum:
     - a signal modelled by DCB + gaussian
@@ -108,12 +106,10 @@ def twoclass_pdf(
     model = 0
     # successively generate the linear composition of pdfs
     if "signal" in comps:
-        model += sig_yield * dcbwg(
-            x, f1, f2, mug, mul, mur, sgg, sgl, sgr, al, ar, nl, nr, mrange
-        )
+        model += dcbwg(x, f1, f2, mug, mug, mug, sgg, sgl, sgr, al, ar, nl, nr, mrange)
 
     if "combinatorial" in comps:
-        model += comb_yield * expon_pdf(x, lb, mrange)
+        model += expon_pdf(x, lb, mrange)
 
     return model
 
@@ -124,8 +120,6 @@ def twoclass_cdf(
     f1: float,
     f2: float,
     mug: float,
-    mul: float,
-    mur: float,
     sgg: float,
     sgl: float,
     sgr: float,
@@ -135,8 +129,6 @@ def twoclass_cdf(
     nr: float,
     lb: float,
     mrange: tuple[float, float] | ArrayLike,
-    sig_yield: int,
-    comb_yield: int,
 ) -> Any:
     """Generate a mixture of pdfs, suitably normalised, to fit a realistic mass spectrum:
     - a signal modelled by DCB + gaussian
@@ -148,12 +140,12 @@ def twoclass_cdf(
     model = 0
     # successively generate the linear composition of pdfs
     if "signal" in comps:
-        model += sig_yield * dcbwg_cdf(
-            x, f1, f2, mug, mul, mur, sgg, sgl, sgr, al, ar, nl, nr, mrange
+        model += dcbwg_cdf(
+            x, f1, f2, mug, mug, mug, sgg, sgl, sgr, al, ar, nl, nr, mrange
         )
 
     if "combinatorial" in comps:
-        model += comb_yield * expon_cdf(x, lb, mrange)
+        model += expon_cdf(x, lb, mrange)
 
     return model
 
@@ -169,13 +161,12 @@ def composite_pdf_factory(
             #     twoclass_pdf, mrange=mrange, comps=["signal", "combinatorial"]
             # )
             _comps = ["signal", "combinatorial"]
-            return lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr, lb, sig_yield, comb_yield: twoclass_pdf(
+            # return lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr, lb, sig_yield, comb_yield: twoclass_pdf(
+            return lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr, lb: twoclass_pdf(
                 x=x,
                 f1=f1,
                 f2=f2,
                 mug=mug,
-                mul=mug,
-                mur=mug,
                 sgg=sgg,
                 sgl=sgl,
                 sgr=sgr,
@@ -184,10 +175,38 @@ def composite_pdf_factory(
                 nl=nl,
                 nr=nr,
                 lb=lb,
-                sig_yield=sig_yield,
-                comb_yield=comb_yield,
+                # sig_yield=sig_yield,
+                # comb_yield=comb_yield,
                 mrange=mrange,
                 comps=_comps,
+            )
+
+
+def composite_cdf_factory(
+    key: str,
+    mrange: tuple[float, float] | ArrayLike,
+) -> Any:
+    """factory method to select the desired model"""
+    match key:
+        case "twoclass":
+            _comps = ["signal", "combinatorial"]
+            return (
+                lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr, lb: twoclass_cdf(
+                    x=x,
+                    f1=f1,
+                    f2=f2,
+                    mug=mug,
+                    sgg=sgg,
+                    sgl=sgl,
+                    sgr=sgr,
+                    al=al,
+                    ar=ar,
+                    nl=nl,
+                    nr=nr,
+                    lb=lb,
+                    mrange=mrange,
+                    comps=_comps,
+                )
             )
 
 
