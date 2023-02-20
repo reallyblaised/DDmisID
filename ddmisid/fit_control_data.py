@@ -300,6 +300,9 @@ if __name__ == "__main__":
         mrange=MRANGE,
         key="twoclass",
     )
+    breakpoint()
+
+    # RFE: fit upper-mass tail
 
     nh, xe = np.histogram(DATA["B_M"], bins=FIT_BINS, range=MRANGE)
     cost_obj = cost.ExtendedBinnedNLL(nh, xe, data_model)
@@ -319,7 +322,6 @@ if __name__ == "__main__":
         sig_yield=0.98 * len(DATA["B_M"]),
         comb_yield=0.2 * len(DATA["B_M"]),
     )
-    breakpoint()
 
     # define the parameter ranges
     mi.limits["sig_yield"] = (0, len(DATA["B_M"]))
@@ -329,16 +331,34 @@ if __name__ == "__main__":
     mi.limits["sgl"] = (0, 50)
     mi.limits["sgr"] = (0, 50)
     mi.limits["lb"] = (0, 500)
-    mi.fixed["f1"] = True
-    mi.fixed["f1"] = True
-    mi.fixed["al"] = True
-    mi.fixed["ar"] = True
-    mi.fixed["nl"] = True
-    mi.fixed["nr"] = True
+
+    # fix the parameters taken from MC fits
+    _fixed = ("f1", "f2", "al", "ar", "nl", "nr")
+    for fixpar in _fixed:
+        mi.fixed[fixpar] = True
 
     # minimise and error estimation
     mi.migrad()
     mi.hesse()
 
+    print(mi.parameters)
+
     # sanity checks
     SanityChecks(mi)()
+
+    # viz results
+    # -----------
+    fig, ax = simple_ax()
+
+    # observation
+    plot_data(
+        data=DATA.B_M,
+        range=MRANGE,
+        bins=PLOT_BINS,
+        ax=ax,
+        label="Data 2016",
+    )
+    # cosmetics & save
+    ax.legend()
+    ax.set_xlabel(r"$m(J/\psi \, K^+)$ [MeV$/c^2$]")
+    save_to(outdir="test_plots", name="test_data")

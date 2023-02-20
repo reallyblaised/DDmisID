@@ -123,7 +123,9 @@ def twoclass_cdf(
     x: ArrayLike | list | tuple,
     f1: float,
     f2: float,
-    mug: float,  # shared
+    mug: float,
+    mul: float,
+    mur: float,
     sgg: float,
     sgl: float,
     sgr: float,
@@ -147,7 +149,7 @@ def twoclass_cdf(
     # successively generate the linear composition of pdfs
     if "signal" in comps:
         model += sig_yield * dcbwg_cdf(
-            x, f1, f2, mug, mug, mug, sgg, sgl, sgr, al, ar, nl, nr, mrange
+            x, f1, f2, mug, mul, mur, sgg, sgl, sgr, al, ar, nl, nr, mrange
         )
 
     if "combinatorial" in comps:
@@ -163,8 +165,29 @@ def composite_pdf_factory(
     """factory method to select the desired model"""
     match key:
         case "twoclass":
-            return partial(
-                twoclass_pdf, mrange=mrange, comps=["signal", "combinatorial"]
+            # return partial(
+            #     twoclass_pdf, mrange=mrange, comps=["signal", "combinatorial"]
+            # )
+            _comps = ["signal", "combinatorial"]
+            return lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr, lb, sig_yield, comb_yield: twoclass_pdf(
+                x=x,
+                f1=f1,
+                f2=f2,
+                mug=mug,
+                mul=mug,
+                mur=mug,
+                sgg=sgg,
+                sgl=sgl,
+                sgr=sgr,
+                al=al,
+                ar=ar,
+                nl=nl,
+                nr=nr,
+                lb=lb,
+                sig_yield=sig_yield,
+                comb_yield=comb_yield,
+                mrange=mrange,
+                comps=_comps,
             )
 
 

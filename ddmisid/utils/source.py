@@ -135,7 +135,7 @@ def load_root(
     max_entries: int | None = None,
     batch_size: str | None = "200 MB",
     **kwargs,
-) -> pd.DataFrame | ArrayLike | ak.Array:
+) -> Any:
     """Wrapper for uproot.iterate() to load ROOT files into a pandas DataFrame"""
 
     if key is not None:
