@@ -63,7 +63,6 @@ def eff_err(n_pass: int, n_tot: int) -> float:
 # template for the event selection: simpe
 data_selection = (
     lambda m_min, m_max: f"((muplus_L0MuonDecision_TOS==1) | (muminus_L0MuonDecision_TOS==1)) \
-            & (K_PIDK>3) \
             & (B_M>{m_min}) \
             & (B_M<{m_max})"
 )
@@ -155,7 +154,6 @@ if __name__ == "__main__":
     # minimise and error estimation
     mi.migrad()
     mi.hesse()
-    print(mi.params)
 
     # sanity checks
     SanityChecks(mi)()
@@ -530,6 +528,28 @@ if __name__ == "__main__":
         ax.set_yscale(f"{scale}")
         save_to(outdir="test_plots", name=f"track_match_chi2_consistency_y{scale}")
 
+
+
+    fig, ax = simple_ax()
+    hist_step_fill(
+        data = MC.K_ProbNNghost,
+        bins = 10,
+        range= (0, 1),
+        ax = ax,   
+        label=r"$B^+ \to J/\psi K^+$ MC",
+    )    
+    plot_data(
+        data = DATA.K_ProbNNghost,
+        bins = 10,
+        range= (0, 1),
+        ax = ax,   
+        label=r"$B^+ \to J/\psi\,K^+$ Data (tight mass window)",
+    )    
+    make_legend(ax=ax, on_plot=False, ycoord=-0.4)
+    ax.set_xlabel(r"Track-match $\chi^2$")
+    for scale in ("linear", "log"):
+        ax.set_yscale(f"{scale}")
+        save_to(outdir="test_plots", name=f"probnnghost_consistency_y{scale}")
     # ~ END OF PRELIMINARIES ~
 
     
