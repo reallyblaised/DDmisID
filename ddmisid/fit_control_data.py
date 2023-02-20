@@ -35,30 +35,20 @@ from scipy.stats import expon
 from numpy.typing import ArrayLike
 from functools import partial
 
+# template for the event selection: simpe
+data_selection = (
+    lambda m_min, m_max: f"((muplus_L0MuonDecision_TOS==1) | (muminus_L0MuonDecision_TOS==1)) \
+            & (K_PIDK>3) \
+            & (B_M>{m_min}) \
+            & (B_M<{m_max})"
+)
 
+# pep8 for immutables
 # number of mins considered in the NLL minimisation in the fit
 FIT_BINS = 40
 PLOT_BINS = 100
-
-# event section
-# -------------
-# @L0: trigger on jpsi, leave muon unbiased
-# @HLT1: trigger on B inclusively without using the singleµ lines, leave muon unbiased
-# @HLT2: trigger on B inclusively without using the singleµ lines, leave muon unbiased
-# @Muon ID: enforce anti-muon criteria to retain a pion-like track
-# @Kinematics and tracking: cuts aligned with event selection
-# @B mass: keep in (6.0, 6.6) GeV window to retain Bc+ signal but cut out misID and other low-mass bkgs
-
-# & (Mu_plus_isMuon==False) & (Mu_plus_PIDmu<0) & (Mu_plus_PIDK<0) \
-# & (Mu_plus_IPCHI2_OWNPV>4.8) \
-# & (Mu_plus_PT>750) & (Mu_plus_P>1e3) & (Jpsi_PT>2000) & (Jpsi_M>3040) & (Jpsi_M<3150) & ((Jpsi_ENDVERTEX_CHI2/Jpsi_ENDVERTEX_NDOF)<9) & (Mu_1_PT>900) & (Mu_2_PT>900) \
-# & (B_plus_DOCA_Jpsi_Mu_plus<0.15) & (B_plus_ISOLATION_BDT<0.2) & ((B_plus_ENDVERTEX_Z-B_plus_PV_Z)>0) & (B_plus_ENDVERTEX_CHI2<25) \
-
-EVT_SELECTION = "((muplus_L0MuonDecision_TOS==1) | (muminus_L0MuonDecision_TOS==1)) \
-            & (K_PIDK>3) \
-            & (B_M>5200) \
-            & (B_M<5400) \
-            & (abs(B_TRUEID)==521) & (Jpsi_TRUEID==443) & (abs(Jpsi_MC_MOTHER_ID)==521) & (abs(muplus_TRUEID)==13) & (muplus_MC_MOTHER_ID==443) & (abs(muminus_TRUEID)==13) & (muminus_MC_MOTHER_ID==443) & (abs(K_TRUEID)==321) & (abs(K_MC_MOTHER_ID)==521)"
+MASS_MIN = 5200
+MASS_MAX = 5400
 
 # branches of interest
 BRANCHES = [
@@ -83,8 +73,9 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # load the data
-    # pep8 convention to signify immutable variables
+    # load the mc, with appropriate truthmatching
+    mc_sel = f"{data_selection(MASS_MIN, MASS_MAX)} \
+        & (abs(B_TRUEID)==521) & (Jpsi_TRUEID==443) & (abs(Jpsi_MC_MOTHER_ID)==521) & (abs(muplus_TRUEID)==13) & (muplus_MC_MOTHER_ID==443) & (abs(muminus_TRUEID)==13) & (muminus_MC_MOTHER_ID==443) & (abs(K_TRUEID)==321) & (abs(K_MC_MOTHER_ID)==521)"
     MC = load_ntuple(
         file_path=f"root://eoslhcb.cern.ch/{args.sim}",
         key="B2DsMuNuTuple",
@@ -96,10 +87,10 @@ if __name__ == "__main__":
             "B_TRUEID",
             "K_MC_MOTHER_ID",
         ],
-        cut=EVT_SELECTION,
+        cut=mc_sel,
     )
     # mass rage considered - remove low-mass bkg for simplicity, taking advantage of the high-mass Bc peak
-    MRANGE = (5200, 5400)
+    MRANGE = (MASS_MIN, MASS_MAX)
 
     # execute the MC unbinned ML fit to extract the parameters of interest, later fed to data models
     # --------------------------------------------------------------------------------------------
@@ -278,10 +269,69 @@ if __name__ == "__main__":
     # =================================================================================================
     #                                        DATA SECTION
     # =================================================================================================
-    EVT_SELECTION = "((muplus_L0MuonDecision_TOS==1) | (muminus_L0MuonDecision_TOS==1)) \
-            & (K_PIDK>3) \
-            & (B_M>5200) \
-            & (B_M<5400)"
+
+    # Prefit the upper-mass sideband to get an estimate for lb in the exp pdf & then fix it in data fit
+    # -------------------------------------------------------------------------------------------------
+    _upper_mass_range = (5.5e3, 5.75e3)
+    upper_mass = load_root(
+        file_path=f"root://eoslhcb.cern.ch/{args.data}",
+        key="B2DsMuNuTuple",
+        tree_name="DecayTree",
+        library="pd",
+        max_entries=-1,
+        branches=["B_M"],
+        cut=data_selection(*_upper_mass_range),  # make sure we don't include Bc decays
+    )
+
+    # fit with decayin exponential
+    expon_pdf = pdf_factory(mrange=_upper_mass_range, key="combinatorial")
+    expon_cdf = cdf_factory(mrange=_upper_mass_range, key="combinatorial")
+
+    # minimise the cost [https://iminuit.readthedocs.io/en/stable/notebooks/cost_functions.html#Binned-Fit]
+    nh, xe = np.histogram(upper_mass.B_M, bins=FIT_BINS, range=_upper_mass_range)
+    cost_obj = cost.BinnedNLL(nh, xe, expon_cdf)
+    mi = Minuit(cost_obj, lb=100)
+
+    # define the parameter ranges
+    mi.limits["lb"] = (0, 1_000)
+
+    # minimise and error estimation
+    mi.migrad()
+    mi.hesse()
+
+    # sanity checks
+    SanityChecks(mi)()
+
+    # viz results
+    # -----------
+    fig, ax = simple_ax()
+
+    # fit model; handle the norm of the pdf
+    nhp, _ = np.histogram(upper_mass.B_M, range=_upper_mass_range, bins=PLOT_BINS)
+    _norm = np.sum(nhp) * (_upper_mass_range[1] - _upper_mass_range[0]) / PLOT_BINS
+    _x = np.linspace(*_upper_mass_range, PLOT_BINS)
+    viz_signal(x=_x, y=_norm * expon_pdf(_x, *mi.values), ax=ax)(label="Fit")
+
+    # observation
+    plot_data(
+        data=upper_mass.B_M,
+        range=_upper_mass_range,
+        bins=PLOT_BINS,
+        ax=ax,
+        label="Data 2016",
+    )
+    # cosmetics & save
+    ax.legend()
+    ax.set_xlabel(r"$m(J/\psi \, K^+)$ [MeV$/c^2$]")
+    save_to(outdir="test_plots", name="test_upper_mass")
+
+    # save the mc fit pars
+    himass_postfit_pars = {}
+    for p in mi.parameters:
+        himass_postfit_pars[p] = ufloat(mi.params[p].value, mi.params[p].error)
+
+    # fit to B+ -> J/psi K+ mass spectrum
+    # -----------------------------------
     DATA = load_root(
         file_path=f"root://eoslhcb.cern.ch/{args.data}",
         key="B2DsMuNuTuple",
@@ -289,22 +339,18 @@ if __name__ == "__main__":
         library="pd",
         max_entries=-1,
         branches=BRANCHES,
-        cut=EVT_SELECTION,
+        cut=data_selection(*MRANGE),  # make sure we don't include Bc decays
     )
+
     # generate a composite model for the fit:
     # - signal: 2CB + gauss
     # - combinatorial: exp
-
-    # fix paramters extracted from MC fit
     data_model = composite_pdf_factory(
         mrange=MRANGE,
         key="twoclass",
     )
-    breakpoint()
 
-    # RFE: fit upper-mass tail
-
-    nh, xe = np.histogram(DATA["B_M"], bins=FIT_BINS, range=MRANGE)
+    nh, xe = np.histogram(DATA.B_M, bins=FIT_BINS, range=MRANGE)
     cost_obj = cost.ExtendedBinnedNLL(nh, xe, data_model)
     mi = Minuit(
         cost_obj,
@@ -318,30 +364,27 @@ if __name__ == "__main__":
         ar=mc_postfit_pars["ar"].n,
         nl=mc_postfit_pars["nl"].n,
         nr=mc_postfit_pars["nr"].n,
-        lb=200,
+        lb=himass_postfit_pars["lb"].n,
         sig_yield=0.98 * len(DATA["B_M"]),
         comb_yield=0.2 * len(DATA["B_M"]),
     )
 
     # define the parameter ranges
-    mi.limits["sig_yield"] = (0, len(DATA["B_M"]))
-    mi.limits["comb_yield"] = (0, len(DATA["B_M"]))
+    mi.limits["sig_yield"] = (0, len(DATA.B_M))
+    mi.limits["comb_yield"] = (0, len(DATA.B_M))
     mi.limits["mug"] = (5200, 5400)
-    mi.limits["sgg"] = (0, 50)
-    mi.limits["sgl"] = (0, 50)
-    mi.limits["sgr"] = (0, 50)
-    mi.limits["lb"] = (0, 500)
+    mi.limits["sgg"] = (0, 100)
+    mi.limits["sgl"] = (0, 100)
+    mi.limits["sgr"] = (0, 100)
 
-    # fix the parameters taken from MC fits
-    _fixed = ("f1", "f2", "al", "ar", "nl", "nr")
+    # fix the parameters taken from MC/upper-mass fits
+    _fixed = ("f1", "f2", "al", "ar", "nl", "nr", "lb")
     for fixpar in _fixed:
         mi.fixed[fixpar] = True
 
     # minimise and error estimation
     mi.migrad()
     mi.hesse()
-
-    print(mi.parameters)
 
     # sanity checks
     SanityChecks(mi)()
@@ -358,6 +401,14 @@ if __name__ == "__main__":
         ax=ax,
         label="Data 2016",
     )
+
+    # plot the total pdf
+    # _norm = (MRANGE[1] - MRANGE[0]) / PLOT_BINS
+    _norm = (6000 - 5000) / PLOT_BINS
+    # _x = np.linspace(*MRANGE, PLOT_BINS)
+    _x = np.linspace(5000, 6000, PLOT_BINS)
+    viz_signal(x=_x, y=_norm * data_model(_x, *mi.values), ax=ax)(label="Fit")
+
     # cosmetics & save
     ax.legend()
     ax.set_xlabel(r"$m(J/\psi \, K^+)$ [MeV$/c^2$]")
