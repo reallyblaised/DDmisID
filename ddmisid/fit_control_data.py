@@ -472,10 +472,69 @@ if __name__ == "__main__":
     # ==============================================================================
     #                               sFit / COWs section
     # ==============================================================================
-    # fill histogram
 
-    # mc
-    # --
+
+    # ==============================================================================
+    #                               Efficiency section
+    # ==============================================================================
+
+    # ------------------------------------------------------------------------------
+    #                               Preliminaries
+    # a) verify that the data and MC are consistent in Track-match CHI2 on "reak" K
+    # ------------------------------------------------------------------------------
+    MC = load_ntuple(
+        file_path=f"root://eoslhcb.cern.ch/{args.sim}",
+        key="B2DsMuNuTuple",
+        tree_name="DecayTree",
+        max_entries=-1,
+        branches=BRANCHES
+        + [
+            "K_TRUEID",
+            "B_TRUEID",
+            "K_MC_MOTHER_ID",
+        ],
+        cut=mc_sel,
+    ) # true B2JpsiK
+
+    # assume under the peak is all signal -> restrict mass range
+    DATA = load_root(
+        file_path=f"root://eoslhcb.cern.ch/{args.data}",
+        key="B2DsMuNuTuple",
+        tree_name="DecayTree",
+        library="pd",
+        max_entries=-1,
+        branches=BRANCHES,
+        cut=data_selection(
+            5279 - 50, 5279 + 50
+        ),  # tight mass window about nominal B+ mass
+    )
+
+    fig, ax = simple_ax()
+    hist_step_fill(
+        data = MC.K_TRACK_MatchCHI2,
+        bins = 50,
+        range= (0, 50),
+        ax = ax,   
+        label=r"$B^+ \to J/\psi K^+$ MC",
+    )    
+    plot_data(
+        data = DATA.K_TRACK_MatchCHI2,
+        bins = 50,
+        range= (0, 50),
+        ax = ax,   
+        label=r"$B^+ \to J/\psi\,K^+$ Data (tight mass window)",
+    )    
+    make_legend(ax=ax, on_plot=False, ycoord=-0.4)
+    ax.set_xlabel(r"Track-match $\chi^2$")
+    for scale in ("linear", "log"):
+        ax.set_yscale(f"{scale}")
+        save_to(outdir="test_plots", name=f"track_match_chi2_consistency_y{scale}")
+
+    # ~ END OF PRELIMINARIES ~
+
+    
+    # ghosts in MC
+    # ------------
     # load the mc, with appropriate truthmatching
     mc_ghost_sel = f"{data_selection(MASS_MIN, MASS_MAX)} \
         & (K_TRUEID == 0)"
@@ -493,15 +552,15 @@ if __name__ == "__main__":
         cut=mc_ghost_sel,
     )
     sden_nh, sden_xe, sden_xc, _ = fill_hist_w(
-        data=mc_ghosts.K_PT,
-        bins=5,
-        range=(0, 1e4),
+        data=mc_ghosts.K_P,
+        bins=10,
+        range=(0, 1e5),
         weights=None,
     )
     snum_nh, _, _, _ = fill_hist_w(
-        data=mc_ghosts[mc_ghosts.K_PIDmu > 3].K_PT,
-        bins=5,
-        range=(0, 1e4),
+        data=mc_ghosts[mc_ghosts.K_PIDmu > 3].K_P,
+        bins=10,
+        range=(0, 1e5),
         weights=None,
     )
 
@@ -510,16 +569,17 @@ if __name__ == "__main__":
 
     # data
     # ----
+    
     dden_nh, dden_xe, dden_xc, dden_nh_err = fill_hist_w(
-        data=DATA[DATA.K_TRACK_MatchCHI2 > 30].K_PT,
-        bins=5,
-        range=(0, 1e4),
+        data=DATA[DATA.K_TRACK_MatchCHI2 > 30].K_P,
+        bins=10,
+        range=(0, 1e5),
         weights=None,
     )
     dnum_nh, dnum_xe, dnum_xc, dnum_nh_err = fill_hist_w(
-        data=DATA[(DATA.K_TRACK_MatchCHI2 > 30) & (DATA.K_PIDmu > 3)].K_PT,
-        bins=5,
-        range=(0, 1e4),
+        data=DATA[(DATA.K_TRACK_MatchCHI2 > 30) & (DATA.K_PIDmu > 3)].K_P,
+        bins=10,
+        range=(0, 1e5),
         weights=None,
     )
 
@@ -549,5 +609,8 @@ if __name__ == "__main__":
     ax.set_ylabel(
         r"$\varepsilon($DLL$_{\mu}>3)~[\%]$"
     )  # supersedes the label in simple_ax
-    ax.set_xlabel(r"$p_{T}$ [MeV/$c$]")
+    ax.set_xlabel(r"$p$ [MeV/$c$]")
     save_to(outdir="test_plots", name=f"data_eff_test")
+
+
+    
