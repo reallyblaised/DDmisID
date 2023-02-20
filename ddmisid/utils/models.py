@@ -7,7 +7,7 @@ __author__ = "Blaise Delaney"
 __email__ = "blaise.delaney at cern.ch"
 
 import numpy as np
-from scipy.stats import crystalball, norm
+from scipy.stats import crystalball, norm, expon
 
 # NOTE: the pdfs (and their composition) generally
 # require the appropriate normalisation factor, given
@@ -100,3 +100,13 @@ def dcbw2g_cdf(
     gausn2 = np.diff(gausp2.cdf(rng))
     gaus2 = gausp2.cdf(x) / gausn2
     return f1 * gaus1 + f2 * gaus2 + f3 * dcbl + (1 - f1 - f2 - f3) * dcbr
+
+
+def expon_pdf(x, lb, mrange):
+    exp = expon(mrange[0], lb)
+    return exp.pdf(x) / np.diff(exp.cdf(mrange))
+
+
+def expon_cdf(x, lb, mrange):
+    exp = expon(mrange[0], lb)
+    return exp.cdf(x) / np.diff(exp.cdf(mrange))

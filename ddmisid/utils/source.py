@@ -17,6 +17,8 @@ from termcolor2 import c as tc
 import pandas as pd
 import uproot
 from tqdm import tqdm
+import awkward as ak
+from numpy.typing import ArrayLike
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -133,7 +135,7 @@ def load_root(
     max_entries: int | None = None,
     batch_size: str | None = "200 MB",
     **kwargs,
-) -> pd.DataFrame:
+) -> pd.DataFrame | ArrayLike | ak.Array:
     """Wrapper for uproot.iterate() to load ROOT files into a pandas DataFrame"""
 
     if key is not None:

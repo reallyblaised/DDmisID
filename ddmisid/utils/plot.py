@@ -13,15 +13,15 @@ import numpy as np
 from pathlib import Path
 from typing import Any
 import mplhep as hep
+import matplotlib as mpl
 
 plt.style.use("science")
 
 # custom color map
-import matplotlib as mpl
-
 mpl.rcParams["axes.prop_cycle"] = mpl.cycler(
-    color=["#0c2c84", "#225ea8", "#1d91c0", "#41b6c4", "#7fcdbb", "#c7e9b4", "#ffffcc"]
+    color=["#4393c3", "#d6604d", "#2166ac", "#b2182b", "#053061", "#f4a582"]
 )
+
 
 # software version
 VERSION = "0.1"
@@ -131,6 +131,7 @@ def simple_ax(
     title: str | None = "LHCb Unofficial",
     ylabel: str = "Candidates",
     normalised: bool = False,
+    scale: str | None = None,
 ) -> tuple[Any, plt.Axes]:
     """Book simple ax
 
@@ -164,7 +165,51 @@ def simple_ax(
         transform=ax.transAxes,
         color="grey",
     )
+    if scale is not None:
+        ax.set_yscale(scale)
+
     return fig, ax
+
+
+def make_legend(
+    ax: plt.Axes,
+    on_plot: bool = True,
+) -> None:
+    """
+    Place the legend below the plot, adjusting number of columns
+
+    Parameters
+    ----------
+    ax: plt.Axes
+        Axes object to place the legend on
+
+    on_plot: bool
+        If true, place the legend on the plot (default: True)
+
+    Returns
+    -------
+    None
+        Places the legend on the axes
+    """
+    # count entries
+    handles, labels = ax.get_legend_handles_labels()
+
+    # decide the number of columns accordingly
+    match len(labels):
+        case 2:
+            ncols = 2
+        case other:
+            ncols = 1
+
+    # place the legend
+    ax.legend(loc="best")
+    if on_plot is False:
+        ax.legend(
+            bbox_to_anchor=(0.5, -0.6),
+            loc="lower center",
+            ncol=ncols,
+            frameon=False,
+        )
 
 
 # save plots in multiple formats
@@ -195,7 +240,7 @@ def save_to(
 # plot data and pdfs
 # ------------------
 def fill_hist_w(
-    data: ArrayLike, bins: int, range: tuple, weights: ArrayLike | None
+    data: ArrayLike, bins: int, range: tuple, weights: ArrayLike | None = None
 ) -> tuple[Any, ...]:
     """Fill histogram accounting weights
 
@@ -248,6 +293,7 @@ def plot_data(
     weights: ArrayLike | None = None,
     label: str | None = None,
     norm: bool = False,
+    color: str = "black",
     **kwargs: Any,
 ) -> None:
     """Plot the data, accounting for weights if provided
@@ -286,9 +332,10 @@ def plot_data(
     nh, xe, cx, err = fill_hist_w(data, bins, range, weights)
 
     # normalise to unity
+    _normalisation = np.sum(nh)
     if norm:
-        nh = nh / np.sum(nh)
-        err = err / np.sum(nh)
+        nh = nh / _normalisation
+        err = err / _normalisation
 
     ax.errorbar(
         cx,
@@ -298,6 +345,7 @@ def plot_data(
         label=label,
         fmt=".",
         markersize=3,
+        color=color,
         **kwargs,
     )
 
@@ -339,9 +387,10 @@ def hist_err(
     nh, xe, xc, err = fill_hist_w(data, bins, range, weights)
 
     # normalise to unity
+    _normalisation = np.sum(nh)
     if norm is True:
-        nh = nh / np.sum(nh)
-        err = err / np.sum(nh)
+        nh = nh / _normalisation
+        err = err / _normalisation
 
     hep.histplot(nh, xe, yerr=err, ax=ax, label=label, **kwargs)
 
@@ -383,11 +432,12 @@ def hist_step_fill(
     nh, xe, xc, err = fill_hist_w(data, bins, range, weights)
 
     # normalise to unity
+    _normalisation = np.sum(nh)
     if norm is True:
-        nh = nh / np.sum(nh)
-        err = err / np.sum(nh)
+        nh = nh / _normalisation
+        err = err / _normalisation
 
-    hep.histplot(nh, xe, yerr=err, ax=ax, **kwargs)
+    hep.histplot(nh, xe, ax=ax, **kwargs)
     lo_y = nh - err
     ax.bar(
         xc,
