@@ -19,7 +19,14 @@ plt.style.use("science")
 
 # custom color map
 mpl.rcParams["axes.prop_cycle"] = mpl.cycler(
-    color=["#4393c3", "#d6604d", "#2166ac", "#b2182b", "#053061", "#f4a582"]
+    color=[
+        "#d6604d",
+        "#4393c3",
+        "#b2182b",
+        "#2166ac",
+        "#f4a582",
+        "#053061",
+    ]
 )
 
 
@@ -36,7 +43,7 @@ def viz_signal(
     """Partially set the ax and datapoints of the visualiser, leaving freedom for color and label"""
 
     def inner(
-        color: str = "tab:red",
+        color: str = None,
         label: str = "Signal",
     ) -> None:
         """Viz the signal"""
