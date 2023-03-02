@@ -5,7 +5,7 @@ generated from the user-defined config file.
 """
 
 from ddmisid import BinningGenerator
-from ddmisid.utils import read_config, debug, timer
+from ddmisid.utils import read_config, debug, timing
 from data.aliases import CalibSamples, MCTunings, BinningVars, CommonCuts
 from termcolor2 import c as tc
 from pathlib import Path
@@ -58,8 +58,7 @@ def match_muid_criteria(
             return ["muon_like"]
 
 
-@timer
-@debug
+@timing
 @check_mu_region  # check whether the region_id is valid
 def generate_jobs(
     pid_config: dict,

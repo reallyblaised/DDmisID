@@ -11,3 +11,4 @@ dependencies:
   - pip:
   # pip-install packages on available in conda-forge or defaults
     - pidcalib2
+    - SciencePlots

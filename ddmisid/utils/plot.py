@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 import mplhep as hep
 import matplotlib as mpl
+import scienceplots
 
 plt.style.use("science")
 
