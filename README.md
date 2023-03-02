@@ -2,6 +2,15 @@
 
 Repository for the standalone tool **D**ata**D**riven**MisID** to extrapolate a misID template from a control region in data. Such a task is executed via the assignment of per-event weights.
 
+## Anatomy of the module 
+
+```mermaid
+sequenceDiagram
+    Alice ->> Bob: Hello Bob, how are you?
+
+```
+
+
 <!-- ## Getting started
 
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.
