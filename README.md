@@ -2,7 +2,6 @@
 
 Repository for the standalone tool **D**ata**D**riven**MisID** to extrapolate a misID template from a control region in data. Such a task is executed via the assignment of per-event weights.
 
-=======
 ## Workflow
 ```mermaid
 
@@ -27,7 +26,6 @@ flowchart TD
 		isnaive -- No --> sw[sWeights yield extraction]
 ```
 
->>>>>>> 420e3f3800d4903473bf984b4b09345fdc206965
 <!-- ## Getting started
 
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.
