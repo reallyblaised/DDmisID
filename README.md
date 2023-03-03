@@ -2,15 +2,32 @@
 
 Repository for the standalone tool **D**ata**D**riven**MisID** to extrapolate a misID template from a control region in data. Such a task is executed via the assignment of per-event weights.
 
-## Anatomy of the module 
-
+=======
+## Workflow
 ```mermaid
-sequenceDiagram
-    Alice ->> Bob: Hello Bob, how are you?
 
+flowchart TD
+		config(config) ---> id1(setup_calib_jobs.py)
+		binning_maker[make_binning] -.-> id1[setup_calib_jobs.py]
+    id1[setup_calib_jobs.py] -- pidcalib2 --> pkli[/ kaon PID efficiency histogram/] 
+		id1[setup_calib_jobs.py] -- pidcalib2 --> pklj[/ pion PID efficiency histogram/] 
+		id1[setup_calib_jobs.py] -- pidcalib2 --> pklk[/ proton PID efficiency histogram/] 
+		id1[setup_calib_jobs.py] -- pidcalib2 --> pkll[/electron PID efficiency histogram/]
+		id1[setup_calib_jobs.py] -- bespoke method --> pklg[/ghost PID efficiency histogram/] 
+
+		pkli --> super[super_hist.py]
+		pklj --> super[super_hist.py]		
+		pklk --> super[super_hist.py]		
+		pkll --> super[super_hist.py]		
+		pklg --> super[super_hist.py]				
+
+	  super --> bml[BML fit templates]
+		bml --> isnaive{Naive method?}		
+		isnaive -- Yes --> y[Simple yield extration]
+		isnaive -- No --> sw[sWeights yield extraction]
 ```
 
-
+>>>>>>> 420e3f3800d4903473bf984b4b09345fdc206965
 <!-- ## Getting started
 
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.
