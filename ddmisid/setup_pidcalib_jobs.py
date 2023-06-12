@@ -65,6 +65,7 @@ def generate_jobs(
     region_id: str,  # allowed values: "antimu_id", "mu_id"
     parent_outdir: str = "bin",
     verbose: bool = False,
+    test: bool = True
 ) -> None:
     """Generate the executable for pidcalib2 jobs.
 

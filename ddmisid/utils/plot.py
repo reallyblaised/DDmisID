@@ -16,7 +16,7 @@ import mplhep as hep
 import matplotlib as mpl
 import scienceplots
 
-plt.style.use("science")
+plt.style.use(["science", "no-latex"])
 
 # custom color map
 mpl.rcParams["axes.prop_cycle"] = mpl.cycler(
