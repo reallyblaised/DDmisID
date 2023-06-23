@@ -34,6 +34,7 @@ mpl.rcParams["axes.prop_cycle"] = mpl.cycler(
 # software version
 VERSION = "0.1"
 
+
 # plot a fitted model
 # -------------------
 def viz_signal(
@@ -102,7 +103,6 @@ class VisualizerFactory:
         bins: int = 100,
         **kwargs: Any,
     ) -> Any:
-
         x = np.linspace(*mrange, bins)
         N = (mrange[1] - mrange[0]) / bins
 
@@ -177,6 +177,53 @@ def simple_ax(
         ax.set_yscale(scale)
 
     return fig, ax
+
+
+def simple_2ax(
+    title: str | None = "LHCb Unofficial",
+    ylabel: str = "Candidates",
+    normalised: bool = False,
+    scale: str | None = None,
+    logo: bool = True,
+) -> tuple[Any, plt.Axes, plt.Axes]:
+    """Book simple ax
+
+    Parameters
+    ----------
+    title: str | None
+        Title of the plot (default: 'LHCb Unofficial')
+
+    ylabel: str
+        Y-axis label (default: 'Candidates')
+
+    normalised: bool
+        If true, normalise histograms to unity (default: False)
+
+    Returns
+    -------
+    tuple[Any, Callable]
+        Fig, ax plt.Axes objects
+    """
+    fig, (ax1, ax2) = plt.subplots(ncols=2, nrows=1, figsize=(8, 2.5))
+
+    for ax in (ax1, ax2):
+        ax.set_title(title, loc="right")
+        # logo
+        ax.text(
+            0.0,
+            1.07,
+            r"\textbf{DD}\textit{mis}ID \texttt{v" + VERSION + "}",
+            ha="left",
+            va="top",
+            transform=ax.transAxes,
+            color="grey",
+        )
+
+    if scale is not None:
+        ax1.set_yscale(scale)
+        ax1.set_ylabel(ylabel)
+
+    return fig, ax1, ax2
 
 
 def make_legend(
