@@ -23,5 +23,9 @@ setup(
         "tabulate",
         "pyyaml",
         "xxhash",
+        "snakemake",
+        "grpcio<2.0",
+        "google-auth<3",
+        "grpcio>=1.24.3",
     ],
 )
