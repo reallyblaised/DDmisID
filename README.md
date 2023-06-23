@@ -2,6 +2,11 @@
 
 Repository for the standalone tool **D**ata**D**riven**MisID** to extrapolate a misID template from a control region in data. Such a task is executed via the assignment of per-event weights.
 
+## Developer (local) installation
+
+1. Source the LHCb environment to run in Python 3.9 and make use of `pidcalib2`: `$ source /cvmfs/lhcb.cern.ch/lib/LbEnv`
+2. Install locally via `pip`. In the root directory: `$ pip install -e .`
+
 ## Workflow
 ```mermaid
 
