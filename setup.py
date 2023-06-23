@@ -21,6 +21,6 @@ setup(
         "tabulate",
         "pyyaml",
         "snakemake",
-	"termcolor2",    
-],
+        "termcolor2",
+    ],
 )
