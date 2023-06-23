@@ -22,5 +22,6 @@ setup(
         "pyyaml",
         "snakemake",
         "termcolor2",
+        "SciencePlots",
     ],
 )

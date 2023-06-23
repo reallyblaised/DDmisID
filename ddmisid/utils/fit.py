@@ -12,6 +12,7 @@ import numpy as np
 from .models import dcbwg, dcbwg_cdf, expon_pdf, expon_cdf
 from functools import partial
 
+
 # commonly used fit models
 # ------------------------
 def pdf_factory(
@@ -33,17 +34,18 @@ def pdf_factory(
     Callable
         Model for unbinned maximum-likelihood fits
     """
-    match key:
-        case None:
-            raise TypeError("Please specify at least one component identifier [str]")
-        case "signal":  # mixture of two one-sided crystal ball functions and a gaussian
-            return lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr: dcbwg(
-                x, f1, f2, mug, mug, mug, sgg, sgl, sgr, al, ar, nl, nr, mrange
-            )
-        case "combinatorial":
-            return lambda x, lb: expon_pdf(mrange=mrange, lb=lb, x=x)
-        case _:
-            raise ValueError("Invalid component identifier(s)")
+    if key == None:
+        raise TypeError("Please specify at least one component identifier [str]")
+    elif (
+        key == "signal"
+    ):  # mixture of two one-sided crystal ball functions and a gaussian
+        return lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr: dcbwg(
+            x, f1, f2, mug, mug, mug, sgg, sgl, sgr, al, ar, nl, nr, mrange
+        )
+    elif key == "combinatorial":
+        return lambda x, lb: expon_pdf(mrange=mrange, lb=lb, x=x)
+    else:
+        raise ValueError("Invalid component identifier(s)")
 
 
 def cdf_factory(
@@ -155,31 +157,30 @@ def composite_pdf_factory(
     mrange: tuple[float, float] | ArrayLike,
 ) -> Any:
     """factory method to select the desired model"""
-    match key:
-        case "twoclass":
-            # return partial(
-            #     twoclass_pdf, mrange=mrange, comps=["signal", "combinatorial"]
-            # )
-            _comps = ["signal", "combinatorial"]
-            # return lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr, lb, sig_yield, comb_yield: twoclass_pdf(
-            return lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr, lb: twoclass_pdf(
-                x=x,
-                f1=f1,
-                f2=f2,
-                mug=mug,
-                sgg=sgg,
-                sgl=sgl,
-                sgr=sgr,
-                al=al,
-                ar=ar,
-                nl=nl,
-                nr=nr,
-                lb=lb,
-                # sig_yield=sig_yield,
-                # comb_yield=comb_yield,
-                mrange=mrange,
-                comps=_comps,
-            )
+    if key == "twoclass":
+        # return partial(
+        #     twoclass_pdf, mrange=mrange, comps=["signal", "combinatorial"]
+        # )
+        _comps = ["signal", "combinatorial"]
+        # return lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr, lb, sig_yield, comb_yield: twoclass_pdf(
+        return lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr, lb: twoclass_pdf(
+            x=x,
+            f1=f1,
+            f2=f2,
+            mug=mug,
+            sgg=sgg,
+            sgl=sgl,
+            sgr=sgr,
+            al=al,
+            ar=ar,
+            nl=nl,
+            nr=nr,
+            lb=lb,
+            # sig_yield=sig_yield,
+            # comb_yield=comb_yield,
+            mrange=mrange,
+            comps=_comps,
+        )
 
 
 def composite_cdf_factory(

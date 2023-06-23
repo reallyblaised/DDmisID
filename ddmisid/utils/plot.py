@@ -3,7 +3,7 @@
 __author__ = "Blaise Delaney"
 __email__ = "blaise.delaney at cern.ch"
 
-from typing import Any
+from typing import Any, Optional, Union, List, Tuple
 import matplotlib.pyplot as plt
 from typing import Callable
 import boost_histogram as bh
@@ -45,7 +45,7 @@ def viz_signal(
     """Partially set the ax and datapoints of the visualiser, leaving freedom for color and label"""
 
     def inner(
-        color: str = None,
+        color: Optional[str] = None,
         label: str = "Signal",
     ) -> None:
         """Viz the signal"""
@@ -97,8 +97,8 @@ class VisualizerFactory:
 
     def plot(
         self,
-        components: str | list[str],
-        mrange: tuple[float, float],
+        components: Union[str, List[str]],
+        mrange: Tuple[float, float],
         ax: plt.Axes,
         bins: int = 100,
         **kwargs: Any,
@@ -109,43 +109,42 @@ class VisualizerFactory:
         # set some cosmetics for the plot
         ax.set_prop_cycle(plt.cycler("color", plt.cm.viridis(np.linspace(0, 1, 10))))
 
-        match components:
-            case "signal":
-                pdf = self._model_config(mrange=mrange, components="signal")(
-                    x, *self._mi.values
-                )[
-                    1
-                ]  # original function returns yield and pdf
-                breakpoint()
-                # return viz_sig(x, pdf, ax=ax)
-                ax.plot(x, pdf)
-            case "total":
-                pdf = self._model_config(mrange=mrange, components="total")(
-                    x, *self._mi.values
-                )[
-                    1
-                ]  # original function returns yield and pdf]
-                # return viz_sig(
-                #     x=x,
-                #     y=100.0 * pdf,
-                #     ax=ax,
-                # )(color="tab:blue", label="Total pdf")
-                ax.plot(x, pdf)
+        if components == "signal":
+            pdf = self._model_config(mrange=mrange, components="signal")(
+                x, *self._mi.values
+            )[
+                1
+            ]  # original function returns yield and pdf
+            # return viz_sig(x, pdf, ax=ax)
+            ax.plot(x, pdf)
+
+        if components == "total":
+            pdf = self._model_config(mrange=mrange, components="total")(
+                x, *self._mi.values
+            )[
+                1
+            ]  # original function returns yield and pdf]
+            # return viz_sig(
+            #     x=x,
+            #     y=100.0 * pdf,
+            #     ax=ax,
+            # )(color="tab:blue", label="Total pdf")
+            ax.plot(x, pdf)
 
 
 # fig, ax factory functions
 # -------------------------
 def simple_ax(
-    title: str | None = "LHCb Unofficial",
+    title: Optional[str] = "LHCb Unofficial",
     ylabel: str = "Candidates",
     normalised: bool = False,
-    scale: str | None = None,
-) -> tuple[Any, plt.Axes]:
+    scale: Optional[str] = None,
+) -> Tuple[Any, plt.Axes]:
     """Book simple ax
 
     Parameters
     ----------
-    title: str | None
+    title: Optional[str]
         Title of the plot (default: 'LHCb Unofficial')
 
     ylabel: str
@@ -156,7 +155,7 @@ def simple_ax(
 
     Returns
     -------
-    tuple[Any, Callable]
+    Tuple[Any, Callable]
         Fig, ax plt.Axes objects
     """
     fig, ax = plt.subplots()
@@ -180,17 +179,17 @@ def simple_ax(
 
 
 def simple_2ax(
-    title: str | None = "LHCb Unofficial",
+    title: Optional[str] = "LHCb Unofficial",
     ylabel: str = "Candidates",
     normalised: bool = False,
-    scale: str | None = None,
+    scale: Optional[str] = None,
     logo: bool = True,
-) -> tuple[Any, plt.Axes, plt.Axes]:
+) -> Tuple[Any, plt.Axes, plt.Axes]:
     """Book simple ax
 
     Parameters
     ----------
-    title: str | None
+    title: Optional[str]
         Title of the plot (default: 'LHCb Unofficial')
 
     ylabel: str
@@ -201,7 +200,7 @@ def simple_2ax(
 
     Returns
     -------
-    tuple[Any, Callable]
+    Tuple[Any, Callable]
         Fig, ax plt.Axes objects
     """
     fig, (ax1, ax2) = plt.subplots(ncols=2, nrows=1, figsize=(8, 2.5))
@@ -254,11 +253,10 @@ def make_legend(
     handles, labels = ax.get_legend_handles_labels()
 
     # decide the number of columns accordingly
-    match len(labels):
-        case 2:
-            ncols = 2
-        case other:
-            ncols = 1
+    if len(labels) == 2:
+        ncols = 2
+    else:
+        ncols = 1
 
     # place the legend
     ax.legend(loc="best")
@@ -299,8 +297,8 @@ def save_to(
 # plot data and pdfs
 # ------------------
 def fill_hist_w(
-    data: ArrayLike, bins: int, range: tuple, weights: ArrayLike | None = None
-) -> tuple[Any, ...]:
+    data: ArrayLike, bins: int, range: tuple, weights: Optional[ArrayLike] = None
+) -> Tuple[Any, ...]:
     """Fill histogram accounting weights
 
     Parameters
@@ -311,7 +309,7 @@ def fill_hist_w(
         Number of bins
     range: tuple
         Range of the histogram
-    weights: ArrayLike | None
+    weights:Optional[ArrayLike]
         Weights to be applied to the data (default: None)
 
     Returns
@@ -347,10 +345,10 @@ def fill_hist_w(
 def plot_data(
     data: ArrayLike,
     ax: plt.Axes,
-    range: tuple[float, float],
+    range: Tuple[float, float],
     bins: int = 50,
-    weights: ArrayLike | None = None,
-    label: str | None = None,
+    weights: Optional[ArrayLike] = None,
+    label: Optional[str] = None,
     norm: bool = False,
     color: str = "black",
     **kwargs: Any,
@@ -368,13 +366,13 @@ def plot_data(
     bins: int
         Number of bins (default: 50)
 
-    range: tuple[float, float]
+    range: Tuple[float, float]
         Range of the data
 
-    weights: ArrayLike | None
+    weights:Optional[ArrayLike]
         Weights for the data (default: None)
 
-    label: str | None
+    label: Optional[str]
         Legend label for the data (default: None)
 
     kwargs: Any
@@ -412,10 +410,10 @@ def plot_data(
 def hist_err(
     data: ArrayLike,
     ax: plt.Axes,
-    range: tuple[float, float],
+    range: Tuple[float, float],
     bins: int = 50,
-    weights: ArrayLike | None = None,
-    label: str | None = None,
+    weights: Optional[ArrayLike] = None,
+    label: Optional[str] = None,
     norm: bool = False,
     **kwargs,
 ) -> None:
@@ -429,11 +427,11 @@ def hist_err(
         Histogram bin edges
     ax: plt.Axes
         Axes to plot on
-    label: str | None
+    label: Optional[str]
         Legend label for the data (default: None)
     kwargs: Any
         Keyword arguments to be passed to the errorbar plot
-    yerr: ArrayLike | None
+    yerr:Optional[ArrayLike]
         Error for the histogram bin contents (default: None)
     norm: bool
         If true, normalise the data to unit area (default: False)
@@ -459,8 +457,8 @@ def hist_step_fill(
     range: tuple,
     ax: plt.Axes,
     bins: int = 50,
-    weights: ArrayLike | None = None,
-    label: str | None = None,
+    weights: Optional[ArrayLike] = None,
+    label: Optional[str] = None,
     norm: bool = False,
     **kwargs,
 ) -> None:
@@ -474,11 +472,11 @@ def hist_step_fill(
         Bin population
     ax: plt.Axes
         Axes to plot on
-    label: str | None
+    label: Optional[str]
         Legend label for the data (default: None)
     kwargs: Any
         Keyword arguments to be passed to the errorbar plot
-    yerr: ArrayLike | None
+    yerr:Optional[ArrayLike]
         Error for the histogram bin contents (default: None)
     norm: bool
         If true, normalise the data to unit area (default: False)
@@ -514,7 +512,7 @@ def eff_plot(
     eff: Any,
     eff_err: Any,
     xerr: Any,
-    label: str | None,
+    label: Optional[str],
     ax: plt.Axes,
     fmt: str = ".",
     markersize: int = 5,
@@ -531,7 +529,7 @@ def eff_plot(
         Efficiency values
     eff_err: Any
         Efficiency errors
-    label: str | None
+    label: Optional[str]
         Legend label for the data (default: None)
     ax: plt.Axes
         Axes to plot on
