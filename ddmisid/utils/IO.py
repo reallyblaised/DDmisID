@@ -8,7 +8,7 @@ from collections.abc import Callable
 from functools import wraps
 from pathlib import Path
 from typing import TypeVar
-from typing import Union, Any
+from typing import Union, Any, List, Optional
 import functools
 import yaml
 from typing_extensions import ParamSpec
@@ -91,16 +91,16 @@ def read_config(
 @timing
 def load_ntuple(
     file_path: str,
-    key: str | None = None,
-    tree_name: str | None = None,
-    branches: list[str] | None = None,
+    key: Optional[str] = None,
+    tree_name: Optional[str] = None,
+    branches: Optional[List[str]] = None,
     library: str = "ak",  # default to awkward
-    cut: list[str] | str | None = None,
-    name: str | None = None,
-    max_entries: int | None = None,
-    batch_size: str | None = "50 KB",
+    cut: Optional[List[str]] = None,
+    name: Optional[str] = None,
+    max_entries: Optional[int] = None,
+    batch_size: Optional[str] = "50 KB",
     **kwargs,
-) -> Any:
+) -> Any:    
     """Load file using pkl or uproot, depending on file extension"""
     ext = Path(file_path).suffix
     if ext == ".pkl":
@@ -127,13 +127,13 @@ def load_ntuple(
 def load_root(
     file_path: str,
     library: str,
-    key: str | None = None,
-    tree_name: str | None = None,
-    branches: list[str] | None = None,
-    cut: list[str] | str | None = None,
-    name: str | None = None,
-    max_entries: int | None = None,
-    batch_size: str | None = "200 MB",
+    key: Optional[str] = None,
+    tree_name: Optional[str] = None,
+    branches: Optional[List[str]] = None,
+    cut: Optional[Union[List[str], str]] = None,
+    name: Optional[str] = None,
+    max_entries: Optional[int] = None,
+    batch_size: Optional[str] = "200 MB",
     **kwargs,
 ) -> Any:
     """Wrapper for uproot.iterate() to load ROOT files into a pandas DataFrame"""
