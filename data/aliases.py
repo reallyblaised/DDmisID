@@ -6,8 +6,9 @@ are defined as dataclass attributes post-init, ie mutable.
 __authors__ = Blaise Delaney
 __emails__  = blaise.delaney at cern.ch
 """
-from dataclasses import dataclass
-from dataclasses import field
+
+from dataclasses import dataclass, field
+from typing import List
 from ddmisid.utils import read_config
 
 _config_path = "config/main.yml"
@@ -15,27 +16,21 @@ _config_path = "config/main.yml"
 
 def update_selstr_run2(sel: str, year: str) -> str:
     """Update a nominal selection string with appropriate aliases"""
-
-    match year:
-        case "_2016" | "_2017" | "_2018":
-            # would love to use match case here
-            if "PT" in sel:
-                sel = sel.replace("PT", "Brunel_PT")
-            if "P" in sel:
-                sel = sel.replace("P", "Brunel_P")
-            if "nTracks" in sel:
-                sel = sel.replace("nTracks", "nTracks_Brunel")
-
-        case "_2011" | "_2012" | "_2015":
-            pass
-
-        case other:
-            raise ValueError("Year identifier not recognised")
-
+    if year in ["_2016", "_2017", "_2018"]:
+        if "PT" in sel:
+            sel = sel.replace("PT", "Brunel_PT")
+        if "P" in sel:
+            sel = sel.replace("P", "Brunel_P")
+        if "nTracks" in sel:
+            sel = sel.replace("nTracks", "nTracks_Brunel")
+    elif year in ["_2011", "_2012", "_2015"]:
+        pass
+    else:
+        raise ValueError("Year identifier not recognised")
     return sel
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class CalibSamples:
     """Container dataclass for the calibration samples of interest
 
@@ -62,7 +57,7 @@ class CalibSamples:
     e_2011: str = "21r1"
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class MCTunings:
     """Container dataclass for the MC tunings
 
@@ -79,7 +74,7 @@ class MCTunings:
     _2011: str = "MC12TuneV2"
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class BinningVars:
     """Container for binning vars
 
@@ -101,27 +96,20 @@ class BinningVars:
     _2018: str = field(init=False)
 
     @staticmethod
-    def alias_upater_run2(varlist: list[str, ...], year: str) -> list[str, ...]:
+    def alias_upater_run2(varlist: List[str], year: str) -> List[str]:
         """Update the list of variables with appropriate aliases"""
-
-        match year:
-            case "_2016" | "_2017" | "_2018":
-                # would love to use match case here
-                if "PT" in varlist:
-                    varlist = list(map(lambda x: x.replace("PT", "Brunel_PT"), varlist))
-                if "P" in varlist:
-                    varlist = list(map(lambda x: x.replace("P", "Brunel_P"), varlist))
-                if "nTracks" in varlist:
-                    varlist = list(
-                        map(lambda x: x.replace("nTracks", "nTracks_Brunel"), varlist)
-                    )
-                return varlist
-
-            case "_2011" | "_2012" | "_2015":
-                return varlist
-
-            case other:
-                raise ValueError("Year identified in BinningVars not recognised")
+        if year in ["_2016", "_2017", "_2018"]:
+            if "PT" in varlist:
+                varlist = list(map(lambda x: x.replace("PT", "Brunel_PT"), varlist))
+            if "P" in varlist:
+                varlist = list(map(lambda x: x.replace("P", "Brunel_P"), varlist))
+            if "nTracks" in varlist:
+                varlist = list(map(lambda x: x.replace("nTracks", "nTracks_Brunel"), varlist))
+            return varlist
+        elif year in ["_2011", "_2012", "_2015"]:
+            return varlist
+        else:
+            raise ValueError("Year identified in BinningVars not recognised")
 
     def build(self) -> None:
         """Populate the dictionary pidcalib binning vars
@@ -143,7 +131,7 @@ class BinningVars:
         self.build()
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class CommonCuts:
     """Container dataclass for evt sel cuts
 

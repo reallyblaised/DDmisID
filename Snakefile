@@ -4,6 +4,8 @@ __author__ = "Blaise Delaney"
 __email__ = "blaise.delaney at cern.ch"
 
 import shutil
+import os
+from snakemake.io import glob_wildcards
 
 # full report of all the efficiencies
 rule all:
@@ -19,37 +21,23 @@ onsuccess:
 # checkpoint for unknown number of reco-dir/sh files to run pidcalib2; stored in directory bin by default 
 checkpoint gen_sh_files:
     input:
-        config_executable = "setup_pidcalib_jobs.py",
+        config_executable = "ddmisid/setup_pidcalib_jobs.py",
     params:
         is_test = f"--test"
     output:
-        directory("bin")
+        directory("bin/")
+        # bash_file = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh"
     shell:
         "python {input.config_executable} {params.is_test}"
 
-# rule run_pidcalib:
-#     input:        
-#         "exec/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh"
-#     output:
-#         protected("exec/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perfHist.root")
-#     log:
-#         "logs/{year}_{magpol}_{dllmu_bin}_{species}_{eff_dirs}.log"
-#     shell:
-#         '''
-#         sh {input} &> {log}
-#         '''
+rule run_pidcalib:
+    input:
+        bash_file = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh"
+    output:
+        pkl_file = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl",
+    shell:
+        "bash {input.bash_file}"
 
-# rule tally_effs:
-#     input:        
-#         "exec/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perfHist.root"
-#     output:
-#         "exec/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/eff.tex"
-#     log:
-#         "logs/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}_eff.log"
-#     params:
-#         yml_file = "exec/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/preserv.yaml"    
-#     shell:
-#         "python /usera/delaney/private/Bc2D0MuNuX/MisID/python/read_calib_file.py --input {input} --preserv {params.yml_file} &> {log}"
 
 def aggregate(wildcards):
     '''
@@ -63,7 +51,7 @@ def aggregate(wildcards):
 
 rule collect:
     input:
-        aggregate
+        aggregate,
     output:
         combined = "pidcalib_full_run.done",
     shell:

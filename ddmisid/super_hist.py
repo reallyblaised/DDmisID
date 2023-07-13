@@ -11,6 +11,7 @@ __email__ = "blaise.delaney at cern.ch"
 import pickle
 import hist
 from ddmisid.utils import read_config
+from typing import Any, Union
 
 
 class PIDEffMixin:
@@ -92,7 +93,7 @@ class SuperHistFactory:
         return self._config_path
 
     @staticmethod
-    def book_binning_axes(binning_dict: dict[str, list[float]]) -> list | tuple:
+    def book_binning_axes(binning_dict: "dict[str, list[float]]") -> Union[list, tuple]:
         """Match binning vars to hist axes
 
         Parameters
@@ -106,32 +107,32 @@ class SuperHistFactory:
             The axes of the histogram
         """
         axes = []
-        match binvar:
-            case [*_, "P"]:
+        for binvar in binning_dict:
+            if binvar in [*_, "P"]:
                 axes.append(
                     hist.axis.Variable(
                         binning_dict[binvar], name="P", label=r"$p$ [MeV$/c$]"
                     )
                 )
-            case [*_, "PT"]:
+            elif binvar in [*_, "PT"]:
                 axes.append(
                     hist.axis.Variable(
                         binning_dict[binvar], name="PT", label=r"$p_T$ [MeV$/c$]"
                     )
                 )
-            case [*_, "ETA"]:
+            elif binvar in [*_, "ETA"]:
                 axes.append(
                     hist.axis.Variable(
                         binning_dict[binvar], name="ETA", label=r"$\eta$"
                     )
                 )
-            case [*_, "nTracks"]:
+            elif binvar in [*_, "nTracks"]:
                 axes.append(
                     hist.axis.Variable(
                         binning_dict[binvar], name="nTracks", label=r"\texttt{nTracks}"
                     )
                 )
-            case [*_, "nSPDhits"]:
+            elif binvar in [*_, "nSPDhits"]:
                 axes.append(
                     hist.axis.Variable(
                         binning_dict[binvar], name="nSPDhits", label=r"\texttt{nSPD}"

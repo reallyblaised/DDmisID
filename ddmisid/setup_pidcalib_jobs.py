@@ -12,14 +12,15 @@ from pathlib import Path
 import argparse
 import os
 import functools
-from typing import Callable, TypeVar, ParamSpec
+from typing import Callable, TypeVar
+from typing_extensions import ParamSpec
 
 T = TypeVar("T")
 P = ParamSpec("P")
 
 
 def check_mu_region(
-    func: Callable[P, T], valid_ids: list[str] = ["antimu_id", "mu_id"]
+    func: Callable[P, T], valid_ids: "list[str]" = ["antimu_id", "mu_id"]
 ) -> Callable[P, T]:
     """Decorator to check whether muon id is valid"""
 
@@ -35,7 +36,7 @@ def check_mu_region(
 def match_muid_criteria(
     region_id: str,
     pid_config: dict,
-) -> list[str]:
+) -> "list[str]":
     """Establish the pid categories from which to extract efficiencies via pidcalib2
 
     Parameters
@@ -51,11 +52,10 @@ def match_muid_criteria(
     list[str]:
         The pid category [{k, pi, p, e}_like, muon_like]
     """
-    match region_id:
-        case "antimu_id":  # partition the hadron-enriched sample into reco categories
-            return list(pid_config["reco_cuts"].keys())
-        case "mu_id":  # signal selection
-            return ["muon_like"]
+    if region_id == "antimu_id": # partition the hadron-enriched sample into reco categories
+        return list(pid_config["reco_cuts"].keys())
+    elif region_id == "mu_id": # signal selection
+        return ["muon_like"]
 
 
 @timing
@@ -174,6 +174,10 @@ def generate_jobs(
 
                     # pipe command to bashfile
                     sh_file.write(f"{job_conf}")
+
+                    # save to pkl
+                    sh_file.write(f'\npidcalib2.pklhisto2root "{sp_outdir}/{namespace}/perf.pkl"')
+
                     sh_file.write(
                         f" \ntouch {sp_outdir}/{namespace}/pidcalib-setup.done && \n"
                     )  # placeholder filler to signal complete execution of pidcalib2
