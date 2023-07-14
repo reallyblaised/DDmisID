@@ -3,7 +3,7 @@
 __author__ = "Blaise Delaney"
 __email__ = "blaise.delaney at mit.edu"
 
-from typing import Any
+from typing import Any, Union
 from numpy.typing import ArrayLike
 from collections.abc import Callable
 import warnings
@@ -16,15 +16,15 @@ from functools import partial
 # commonly used fit models
 # ------------------------
 def pdf_factory(
-    mrange: tuple[float, float],
-    key: tuple[str, ...] | str,
+    mrange: Union["tuple[float, float]", ArrayLike],
+    key: Union["tuple[str, ...]", str],
 ) -> Callable:
     """Factory method to select the desired simple model in the fit.
 
     Parameters
     ----------
     mrange: tuple[float, float]
-        Range of the fitted variable (typically invariant mass)
+        Range of the fitted variable (typically invariant mass)
 
     components: tuple[str, ...] | str
         Names of the components in the model
@@ -49,15 +49,15 @@ def pdf_factory(
 
 
 def cdf_factory(
-    mrange: tuple[float, float],
-    key: tuple[str, ...] | str,
+    mrange: Union["tuple[float, float]", ArrayLike],
+    key: Union["tuple[str, ...]", str],
 ) -> Callable:
     """Factory method to select the desired model cdf.
 
     Parameters
     ----------
     mrange: tuple[float, float]
-        Range of the fitted variable (typically invariant mass)
+        Range of the fitted variable (typically invariant mass)
 
     components: tuple[str, ...] | str
         Names of the components in the model
@@ -67,22 +67,21 @@ def cdf_factory(
     Callable
         Model cdf evaluated across the mrange
     """
-    match key:
-        case None:
-            raise TypeError("Please specify at least one component identifier [str]")
-        case "signal":  # mixture of two one-sided crystal ball functions and a gaussian
-            return lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr: dcbwg_cdf(
-                x, f1, f2, mug, mug, mug, sgg, sgl, sgr, al, ar, nl, nr, mrange
-            )
-        case "combinatorial":
-            return lambda x, lb: expon_cdf(x, lb, mrange)
-        case _:
-            raise ValueError("Invalid component identifier(s)")
+    if key is None:
+        raise TypeError("Please specify at least one component identifier [str]")
+    elif key == "signal": # mixture of two one-sided crystal ball functions and a gaussian
+        return lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr: dcbwg_cdf(
+            x, f1, f2, mug, mug, mug, sgg, sgl, sgr, al, ar, nl, nr, mrange
+        )
+    elif key == "combinatorial":
+        return lambda x, lb: expon_cdf(x, lb, mrange)
+    else:
+        raise ValueError("Invalid component identifier(s)")
 
 
 def twoclass_pdf(
-    comps: tuple[str, ...] | list | None,
-    x: ArrayLike | list | tuple,
+    comps: Union["tuple[str, ...]", list, None],
+    x: Union[ArrayLike, list, tuple],
     f1: float,
     f2: float,
     mug: float,
@@ -94,7 +93,7 @@ def twoclass_pdf(
     nl: float,
     nr: float,
     lb: float,
-    mrange: tuple[float, float] | ArrayLike,
+    mrange: Union["tuple[float, float]", ArrayLike],
     # sig_yield: int,
     # comb_yield: int,
 ) -> Any:
@@ -109,16 +108,14 @@ def twoclass_pdf(
     # successively generate the linear composition of pdfs
     if "signal" in comps:
         model += dcbwg(x, f1, f2, mug, mug, mug, sgg, sgl, sgr, al, ar, nl, nr, mrange)
-
     if "combinatorial" in comps:
         model += expon_pdf(x, lb, mrange)
-
     return model
 
 
 def twoclass_cdf(
-    comps: tuple[str, ...] | list | None,
-    x: ArrayLike | list | tuple,
+    comps: Union["tuple[str, ...]", list, None],
+    x: Union[ArrayLike, list, tuple],
     f1: float,
     f2: float,
     mug: float,
@@ -130,7 +127,7 @@ def twoclass_cdf(
     nl: float,
     nr: float,
     lb: float,
-    mrange: tuple[float, float] | ArrayLike,
+    mrange: Union["tuple[float, float]", ArrayLike],
 ) -> Any:
     """Generate a mixture of pdfs, suitably normalised, to fit a realistic mass spectrum:
     - a signal modelled by DCB + gaussian
@@ -145,7 +142,6 @@ def twoclass_cdf(
         model += dcbwg_cdf(
             x, f1, f2, mug, mug, mug, sgg, sgl, sgr, al, ar, nl, nr, mrange
         )
-
     if "combinatorial" in comps:
         model += expon_cdf(x, lb, mrange)
 
@@ -154,7 +150,7 @@ def twoclass_cdf(
 
 def composite_pdf_factory(
     key: str,
-    mrange: tuple[float, float] | ArrayLike,
+    mrange: Union["tuple[float, float]", ArrayLike],
 ) -> Any:
     """factory method to select the desired model"""
     if key == "twoclass":
@@ -185,11 +181,10 @@ def composite_pdf_factory(
 
 def composite_cdf_factory(
     key: str,
-    mrange: tuple[float, float] | ArrayLike,
+    mrange: Union["tuple[float, float]", ArrayLike],
 ) -> Any:
     """factory method to select the desired model"""
-    match key:
-        case "twoclass":
+    if key == "twoclass":
             _comps = ["signal", "combinatorial"]
             return (
                 lambda x, f1, f2, mug, sgg, sgl, sgr, al, ar, nl, nr, lb: twoclass_cdf(

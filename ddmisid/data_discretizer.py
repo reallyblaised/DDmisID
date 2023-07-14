@@ -29,7 +29,7 @@ class DataDiscretizer(Discretizer):
     """
     User interface for discretizing some dataset into bins as specified by the user with a config file.
     """
-    def __init__(self, binning: dict[str: list] | OrderedDict[str: list], data_cuts: dict[str: str] | OrderedDict[str: str], data: pd.DataFrame) -> None:
+    def __init__(self, binning: "dict[str: list]", data_cuts: "dict[str: str]", data: pd.DataFrame) -> None:
         """
         Initializes a DataDiscretizer object equipped with parameters for discretizing data.
         """
@@ -40,7 +40,7 @@ class DataDiscretizer(Discretizer):
         self._df_preprocessing(self.data_cuts)
         self.hist = None
 
-    def _df_preprocessing(self, data_cuts: dict[str: str] | OrderedDict[str: str]) -> None:
+    def _df_preprocessing(self, data_cuts: "dict[str: str]") -> None:
         """
         Internal method for preprocessing of data according to user-specified data cuts.
         Explicit calling by user is never necessary.
@@ -55,7 +55,7 @@ class DataDiscretizer(Discretizer):
         none_apply_expr += ")" # close outer expression
         self.preprocess["none"] = self.data.eval(none_apply_expr)
 
-    def add_cuts(self, data_cuts: dict[str: str] | OrderedDict[str: str]) -> None:
+    def add_cuts(self, data_cuts: "dict[str: str]") -> None:
         """
         Add additional cuts to consider in Discretizer.
         """
