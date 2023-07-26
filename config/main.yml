@@ -49,7 +49,19 @@ pid:
   
   # DATA section: cuts applied to the hadron enriched *data*: the syntax must reflect the branch names in the user-defined ntuple
   # ---------------------------------------------------------------------------------------------------------------
-  data_cuts:
-    kaon      : "Mu_plus_PIDmu<0 & IsMuon==0 & Mu_plus_ProbNNghost<0.2 & Mu_plus_PIDK>0.0 & (Mu_plus_PIDK-Mu_plus_PIDp)>0.0 & (Mu_plus_PIDK-Mu_plus_PIDe)>0.0"
-    pion      : "Mu_plus_PIDmu<0 & IsMuon==0 & Mu_plus_ProbNNghost<0.2 & Mu_plus_PIDK<0.0 & Mu_plus_PIDp<0.0 & Mu_plus_PIDe<0.0"
-    proton    : "Mu_plus_PIDmu<0 & IsMuon==0 & Mu_plus_ProbNNghost<0.2 & Mu_plus_PIDp>0.0 & (Mu_plus_PIDp-Mu_plus_PIDK)>0.0 & (Mu_plus_PIDp-Mu_plus_PIDe)>0.0"
+  # prefix for muon branches in the data tuples
+
+  data_prefixes: # NOTE: keys must match binning variable names
+    P: "Mu_plus" # to signal that branches follow the naming convention Mu_plus_{P, PT, ETA...}
+    ETA: "Mu_plus_LK"
+    nTracks: ""
+
+  root_config: # dependent on root file(s) of data being considered 
+    root_key: "B2DMuNuX_D02KPi_FakeMuonTuple"
+    root_tree_name: "DecayTree"
+
+  # RFE: decide on common selection scope
+  data_cuts: 
+    kaon      : "Mu_plus_InMuonAcc==1.0 & Mu_plus_NShared==0 & Mu_plus_P>10000 & Mu_plus_P<100000 & Mu_plus_PT>1500 & Mu_plus_PIDmu<0 & Mu_plus_isMuon==0 & Mu_plus_ProbNNghost<0.2 & Mu_plus_PIDK>0.0 & (Mu_plus_PIDK-Mu_plus_PIDp)>0.0 & (Mu_plus_PIDK-Mu_plus_PIDe)>0.0"
+    pion      : "Mu_plus_InMuonAcc==1.0 & Mu_plus_NShared==0 & Mu_plus_P>10000 & Mu_plus_P<100000 & Mu_plus_PT>1500 & Mu_plus_PIDmu<0 & Mu_plus_isMuon==0 & Mu_plus_ProbNNghost<0.2 & Mu_plus_PIDK<0.0 & Mu_plus_PIDp<0.0 & Mu_plus_PIDe<0.0"
+    proton    : "Mu_plus_InMuonAcc==1.0 & Mu_plus_NShared==0 & Mu_plus_P>10000 & Mu_plus_P<100000 & Mu_plus_PT>1500 & Mu_plus_PIDmu<0 & Mu_plus_isMuon==0 & Mu_plus_ProbNNghost<0.2 & Mu_plus_PIDp>0.0 & (Mu_plus_PIDp-Mu_plus_PIDK)>0.0 & (Mu_plus_PIDp-Mu_plus_PIDe)>0.0"
