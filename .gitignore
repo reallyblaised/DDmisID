@@ -139,3 +139,18 @@ dmypy.json
 *dev*
 *done
 *kevin*
+
+# Ignore PDF, PNG, and EPS files
+*.pdf
+*.png
+*.eps
+
+# ignore .zip files
+*.zip
+
+# Ignore ROOT files (used in particle physics)
+*.root
+
+# Ignore directories containing 'plots' or 'scratch' in their names
+*plots*/
+*scratch*/
