@@ -30,11 +30,17 @@ checkpoint gen_sh_files:
     shell:
         "python {input.config_executable} {params.is_test}"
 
+
+# run pidcalib2 on each of the sub-directories produced by setup.py
 rule run_pidcalib:
     input:
         bash_file = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh"
     output:
         pkl_file = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl",
+    params:
+        output_dir = "logs/pidcalib/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}", # FIXEME: need to adjust this path + maybe make the same name for all hists.pkl
+    log:
+        log_file = "logs/pidcalib/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/pidcalib2.make_eff_hists.log",
     shell:
         "bash {input.bash_file}"
 
@@ -46,7 +52,8 @@ def aggregate(wildcards):
     '''
     checkpoint_output = checkpoints.gen_sh_files.get(**wildcards).output[0]
     year, magpol, dllmu_bin, species, eff_dirs = glob_wildcards(os.path.join(checkpoint_output, '{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh'))
-    return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh", zip, year=year, magpol=magpol, dllmu_bin=dllmu_bin, species=species, eff_dirs=eff_dirs)
+    
+    return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl", zip, year=year, magpol=magpol, dllmu_bin=dllmu_bin, species=species, eff_dirs=eff_dirs)
 
 
 rule collect:
