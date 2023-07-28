@@ -10,13 +10,12 @@ import pickle
 import matplotlib.pyplot as plt
 from typing import List
 
+
 # RFE:
 # - [ ] Add documentation
 # - [ ] normalise templates to unity (else mu != the yield)
 # - [ ] verify path to templates
 # - [ ] verify path to data
-
-
 class BMLFitter:
     def __init__(self, config_file: str, data_file: str):
         # Load the configuration
