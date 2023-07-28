@@ -52,9 +52,11 @@ def match_muid_criteria(
     list[str]:
         The pid category [{k, pi, p, e}_like, muon_like]
     """
-    if region_id == "antimu_id": # partition the hadron-enriched sample into reco categories
+    if (
+        region_id == "antimu_id"
+    ):  # partition the hadron-enriched sample into reco categories
         return list(pid_config["reco_cuts"].keys())
-    elif region_id == "mu_id": # signal selection
+    elif region_id == "mu_id":  # signal selection
         return ["muon_like"]
 
 
@@ -65,7 +67,7 @@ def generate_jobs(
     region_id: str,  # allowed values: "antimu_id", "mu_id"
     parent_outdir: str = "bin",
     verbose: bool = False,
-    test: bool = True
+    test: bool = True,
 ) -> None:
     """Generate the executable for pidcalib2 jobs.
 
@@ -89,7 +91,6 @@ def generate_jobs(
 
     # having read the config, write a suitable json file
     for y in pid_config["years"]:
-
         # generate the per-year binning file, and pass the binning json file path
         binning_path = BinningGenerator(path="config/main.yml").build(year=y)
 
@@ -98,7 +99,6 @@ def generate_jobs(
         ].items():  # true hadrons, ghosts, electons whose abundance must be extracted
             for reco_sp in reco_set:  # reco partition identifiers
                 for magpol in pid_config["magpols"]:
-
                     # differentiate between electron and hadrons for calibration samples
                     if true_sp_id != "electron":
                         CALIBRATION_SAMPLE = getattr(CalibSamples(), f"hadron_{y}")
@@ -148,9 +148,11 @@ def generate_jobs(
                         )
 
                     # establish the pidcalib2 command and relative args
-                    scratch_dir = "scratch"
+                    scratch_dir = "scratch" # NOTE: ask if necessary/useful for something later 
                     Path(scratch_dir).mkdir(parents=True, exist_ok=True)
-                    job_conf = f'pidcalib2.make_eff_hists --sample {CALIBRATION_SAMPLE} --magnet {magpol} --particle {true_sp_alias} --pid-cut "{RECO_SEL}" --binning-file {binning_path} --output-dir {scratch_dir}/{region_id}'
+
+                    job_conf = f'source /cvmfs/lhcb.cern.ch/lib/LbEnv &&\nlb-conda pidcalib pidcalib2.make_eff_hists --sample {CALIBRATION_SAMPLE} --magnet {magpol} --particle {true_sp_alias} --pid-cut "{RECO_SEL}" --binning-file {binning_path} --output-dir {scratch_dir}/{region_id}'
+
                     for bv in BINNING_VARS:
                         job_conf += f" --bin-var {bv}"
 
@@ -173,19 +175,11 @@ def generate_jobs(
                     sh_file = open(f"{sp_outdir}/{namespace}/run.sh", "w")
 
                     # pipe command to bashfile
-                    sh_file.write(f"{job_conf}")
-
-                    # save to pkl
-                    sh_file.write(f'\npidcalib2.pklhisto2root "{sp_outdir}/{namespace}/perf.pkl"')
+                    sh_file.write(f"{job_conf} &&\n")
 
                     sh_file.write(
-                        f" \ntouch {sp_outdir}/{namespace}/pidcalib-setup.done && \n"
+                        f"touch {sp_outdir}/{namespace}/pidcalib2.make_eff_hists.done"
                     )  # placeholder filler to signal complete execution of pidcalib2
-
-                    # HACK: rename so that all root tuples are called the same - helps with the snake pipeline
-                    epilogue = f"""for f in {sp_outdir}/{namespace}/*.root; do\nmv \"$f\" {sp_outdir}/{namespace}/perfHist.root\ndone
-                    """
-                    sh_file.write(epilogue + "\n")
                     sh_file.close()
 
                     # make the bash file executable

@@ -10,7 +10,8 @@ from snakemake.io import glob_wildcards
 # full report of all the efficiencies
 rule all:
     input:
-        "pidcalib_full_run.done"
+        "pidcalib_full_run.done",
+        "discretizer.done",
 
 onsuccess:
     shutil.rmtree(".snakemake/metadata")
@@ -26,15 +27,20 @@ checkpoint gen_sh_files:
         is_test = f"--test"
     output:
         directory("bin/")
-        # bash_file = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh"
     shell:
         "python {input.config_executable} {params.is_test}"
 
+
+# run pidcalib2 on each of the sub-directories produced by setup.py
 rule run_pidcalib:
     input:
         bash_file = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh"
     output:
         pkl_file = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl",
+    params:
+        output_dir = "logs/pidcalib/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}", # FIXEME: need to adjust this path + maybe make the same name for all hists.pkl
+    log:
+        log_file = "logs/pidcalib/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/pidcalib2.make_eff_hists.log",
     shell:
         "bash {input.bash_file}"
 
@@ -46,9 +52,10 @@ def aggregate(wildcards):
     '''
     checkpoint_output = checkpoints.gen_sh_files.get(**wildcards).output[0]
     year, magpol, dllmu_bin, species, eff_dirs = glob_wildcards(os.path.join(checkpoint_output, '{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh'))
-    return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh", zip, year=year, magpol=magpol, dllmu_bin=dllmu_bin, species=species, eff_dirs=eff_dirs)
 
+    return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl", zip, year=year, magpol=magpol, dllmu_bin=dllmu_bin, species=species, eff_dirs=eff_dirs)
 
+  
 rule collect:
     input:
         aggregate,
@@ -58,3 +65,27 @@ rule collect:
         '''
         echo {input} > {output.combined}
         '''
+
+checkpoint discretize_data:
+    input:
+        script = "ddmisid/data_discretizer.py",
+        data_path = "99_2021_01_443970_443970746_Bc2D0MuNuXSlim.root" # TODO: retrieve from config file
+    output:
+        directory("obs/") # NOTE: FIGURE OUT WHAT TO DO ABOUT NAME CONFLICTS
+    shell:
+        "python {input.script} {input.data_path}"
+
+def aggregate_discretizer_wildcards(wildcards):
+    checkpoint_output = checkpoints.discretize_data.get(**wildcards).output[0]
+    p, eta, ntracks = glob_wildcards(os.path.join(checkpoint_output, '{p}/{eta}/{ntracks}/obs.pkl'))
+    return expand(checkpoint_output+"/{p}/{eta}/{ntracks}/obs.pkl", zip, p=p, eta=eta, ntracks=ntracks)
+
+rule collect_discretizer:
+    input:
+        aggregate_discretizer_wildcards,
+    output:
+        combined = "discretizer.done"
+    shell:
+        "echo {input} > {output.combined}"
+
+

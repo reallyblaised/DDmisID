@@ -6,11 +6,12 @@ from abc import ABC, abstractmethod
 import pandas as pd
 import numpy as np
 import hist
-from collections import OrderedDict
 
 import matplotlib.pyplot as plt # might not have a need for this import 
-from utils import load_ntuple
+from ddmisid.utils import read_config, load_ntuple
 from pathlib import Path
+import argparse
+import pickle
 
 
 class Discretizer(ABC):
@@ -115,5 +116,101 @@ def plot_hist_2d(h: hist.Hist, axis_1: str, axis_2: str, path: str) -> None:
     plt.savefig(f"{path}/{axis_1}_{axis_2}.png")
 
 
+def pkl_2d(binning: "dict[str: list]", data_cuts: "dict[str: str]", hist: hist.Hist) -> None:
+    keys = list(binning.keys())
+    num_p_bins, num_eta_bins = len(binning[keys[0]]), len(binning[keys[1]])
+    for i, p_bin in enumerate(binning[keys[0]]):
+        if i < num_p_bins-1:
+            file_path_p = f"obs/{p_bin}-{binning[keys[0]][i+1]}"
+        else:
+            continue # no more bins
+        for j, eta_bin in enumerate(binning[keys[1]]):
+            if j < num_eta_bins-1:
+                file_path = file_path_p + f"/{eta_bin}-{binning[keys[1]][j+1]}"
+            else:
+                continue # no more bins
+
+            # data_cuts["none"] = None
+            # obs = {}
+            # for s, key in enumerate(data_cuts):
+            #     obs[key] = hist[(i, j, s)]
+            obs = hist[i:i+1, j:j+1, :] # include all reco categories
+
+            Path(file_path).mkdir(parents=True, exist_ok=True)
+            with open(f"{file_path}/obs.pkl", "wb") as file:
+                pickle.dump(obs, file)
+
+
+def pkl_3d(binning: "dict[str: list]", data_cuts: "dict[str: str]", hist: hist.Hist) -> None:
+    keys = list(binning.keys())
+    num_p_bins, num_eta_bins, num_ntracks_bins = len(binning[keys[0]]), len(binning[keys[1]]), len(binning[keys[2]])
+    for i, p_bin in enumerate(binning[keys[0]]):
+        if i < num_p_bins-1:
+            file_path_p = f"obs/{p_bin}-{binning[keys[0]][i+1]}"
+        else:
+            continue # no more bins
+        for j, eta_bin in enumerate(binning[keys[1]]):
+            if j < num_eta_bins-1:
+                file_path_eta = file_path_p + f"/{eta_bin}-{binning[keys[1]][j+1]}"
+            else:
+                continue # no more bins
+            for k, ntracks_bin in enumerate(binning[keys[2]]):
+                if k < num_ntracks_bins-1:
+                    file_path = file_path_eta + f"/{ntracks_bin}-{binning[keys[2]][k+1]}"
+                else:
+                    continue # no more bins
+
+                # data_cuts["none"] = None
+                # obs = {}
+                # for s, key in enumerate(data_cuts):
+                #     obs[key] = hist[(i, j, k, s)] # attach uncertainties -> hist
+                obs = hist[i:i+1, j:j+1, k:k+1, :] # include all reco categories
+
+                Path(file_path).mkdir(parents=True, exist_ok=True)
+                with open(f"{file_path}/obs.pkl", "wb") as file:
+                    pickle.dump(obs, file)
+
+
 if __name__ == "__main__":
-    pass
+    # get path to data file
+    parser = argparse.ArgumentParser(description="data discretizer")
+    parser.add_argument("data_file_path", type=str, help="provide path to data for discretizer")
+    data_path_arg = parser.parse_args().data_file_path
+    data_path = r"{}".format(data_path_arg) # create raw string from arg
+
+    # get binning, data cuts, selection cuts from config file
+    pid_config = read_config("config/main.yml", key="pid")
+    antimu_id, common_sel = pid_config["antimu_id"], pid_config["common_sel"]
+    binning_no_prefix, data_cuts = pid_config["binning"], pid_config["data_cuts"]
+    root_key, root_tree_name = pid_config["root_config"]["root_key"], pid_config["root_config"]["root_tree_name"]
+    data_prefixes = pid_config["data_prefixes"]
+    
+    # rename binning variables to include prefixes used in root file
+    binning = {}
+    for key, prefix in data_prefixes.items():
+        if prefix:
+            binning[f"{prefix}_{key}"] = binning_no_prefix[key]
+        else:
+            binning[f"{key}"] = binning_no_prefix[key]
+
+    # load data, apply cuts, and discretize
+    data = load_ntuple( 
+        file_path=data_path,
+        key = root_key,
+        tree_name=root_tree_name,
+        library="pd",
+        batch_size="200 MB",
+        max_entries=None
+    )
+    # data_sel = data.query(f"{antimu_id} & {common_sel}") # include common_sel and antimu_id in reco cuts instead
+    data_sel = data # if common_sel reintoduced, remove this
+    discretizer = DataDiscretizer(binning, data_cuts, data_sel)
+    h = discretizer.discretize()
+
+    # save obs for every P, ETA, nTracks to pkl file
+    if len(binning) == 2:
+        pkl_2d(binning, data_cuts, h)
+    elif len(binning) == 3:
+        pkl_3d(binning, data_cuts, h)
+    else:
+        assert len(binning) not in [2, 3], "inappropriate binning dimensions"
