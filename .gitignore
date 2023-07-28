@@ -154,3 +154,5 @@ dmypy.json
 # Ignore directories containing 'plots' or 'scratch' in their names
 *plots*/
 *scratch*/
+*pidcalib_output*/
+*.snakemake
