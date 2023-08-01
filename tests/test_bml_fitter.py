@@ -28,11 +28,10 @@ def mock_data():
 
 # A pytest fixture for creating a BMLFitter instance
 @pytest.fixture
-def mock_fitter(tmp_path="test_data"):
+def mock_fitter(tmp_path):
     # Create temporary files for data and config
-    Path(tmp_path).mkdir(exist_ok=True, parents=True)
-    data_file = f"{tmp_path}/data.pkl"
-    config_file = f"{tmp_path}/config.yml"
+    data_file = tmp_path / "data.pkl"
+    config_file = tmp_path / "config.yml"
 
     # Save the mock data and config to the temporary files
     with open(data_file, "wb") as file:
