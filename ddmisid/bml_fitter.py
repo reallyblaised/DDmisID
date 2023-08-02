@@ -7,12 +7,14 @@ import pyhf
 import yaml
 import numpy as np
 import pickle
-import matplotlib.pyplot as plt
 from typing import List
 import json
 from typing import Any
 import matplotlib.pyplot as plt
 import scienceplots
+from numpy.typing import ArrayLike
+import hist
+import cabinetry
 
 plt.style.use(["science", "no-latex"])
 
@@ -33,14 +35,18 @@ class BMLFitter:
         result_dict (dict): The result of the fit as a dictionary.
     """
 
-    def __init__(self, data_file: str, config_file: str = "config/main.yml"):
-        # Load the configuration
+    def __init__(
+        self, data_file: str, template_dir: str, config_file: str = "config/main.yml"
+    ) -> None:
+        # Load the config to identify species under scrutiny
         with open(config_file, "r") as file:
             self.config = yaml.safe_load(file)
 
         # Load the data
         with open(data_file, "rb") as file:
             self.data = pickle.load(file)
+
+        self.template_dir = template_dir
 
         # Set the template attributes from the config file
         self._set_templates()
@@ -60,45 +66,77 @@ class BMLFitter:
     def _normalise_templates(self):
         """Normalise the templates to unit area; the normfactor modifies is now the yield."""
         for template_name in self.config.keys():
-            if hasattr(self, template_name):
-                template = getattr(self, template_name)
-                template_sum = np.sum(template.view().value)
+            attr_name = f"{template_name}_template"
+            if hasattr(self, attr_name):
+                template = getattr(self, attr_name)
+                template_sum = template.sum()
                 if template_sum != 0:
                     normalized_template = template / template_sum
-                    setattr(self, template_name, normalized_template)
+                    setattr(self, attr_name, normalized_template)
                 else:  # Handle empty template
-                    # Setting a null-populated template
-                    null_template = np.zeros_like(template)
+                    # Create a null-populated Hist object with the same axes
+                    null_template = hist.Hist(template.axes)
                     setattr(self, template_name, null_template)
 
     def _set_templates(self) -> None:
         """Set the templates, normalised to unity, as attributes of the class."""
-        for template_name, template in self.config.items():
-            if isinstance(template, List):
-                setattr(self, template_name, np.array(template))
+        for template_name in self.config.keys():
+            # load the pkl template, as identified by the key
+            with open(f"{self.template_dir}/{template_name}.pkl", "rb") as f:
+                template = pickle.load(
+                    f
+                ).view()  # load only the bin content of a regular - unweighted - histogram
+
+            if isinstance(
+                template, (list, np.ndarray)
+            ):  # Check if it is a list or ndarray
+                setattr(self, f"{template_name}_template", np.array(template))
             else:
-                raise ValueError(f"Template {template_name} is not a list.")
+                raise ValueError(
+                    f"Template {template_name} is not a list or ndarray."
+                )  # Provide a clear error message
 
         # Normalise the templates to attain unit area
         self._normalise_templates()
 
     def build_workspace(self) -> dict[str, Any]:
         """Build the workspace spec."""
-        channel = {"name": "singlechannel", "samples": [], "data": self.data.tolist()}
+        channel = {"name": "singlechannel", "samples": []}
 
-        for template_name in self.config.keys():
-            if hasattr(self, template_name):
-                template = getattr(self, template_name)
+        for true_species in self.config.keys():
+            if hasattr(self, f"{true_species}_template"):
+                template = getattr(self, f"{true_species}_template")
                 sample = {
-                    "name": template_name,
+                    "name": f"{true_species}_template",
                     "data": template.tolist(),
-                    "modifiers": [{"name": "mu", "type": "normfactor", "data": None}],
+                    "modifiers": [
+                        {
+                            "name": f"{true_species}_mu",
+                            "type": "normfactor",
+                            "data": None,
+                        }
+                    ],
                 }
                 channel["samples"].append(sample)
 
-        spec = {"channels": [channel]}
+        spec = {
+            "channels": [channel],
+            "observations": [{"name": "singlechannel", "data": self.data.tolist()}],
+            "measurements": [
+                {
+                    "name": "Measurement",
+                    "config": {
+                        "poi": f"{list(self.config.keys())[0]}_mu",  # first species is the POI -> pyhf does not yet support multiple POIs
+                        "parameters": [],
+                    },
+                }
+            ],
+            "version": "1.0.0",
+        }
 
-        # return the workspace
+        # set spec as attribute
+        setattr(self, "spec", spec)
+
         return spec
 
     def export_workspace(self, filename: str = "workspace.json") -> None:
@@ -113,36 +151,38 @@ class BMLFitter:
 
     def fit(self) -> dict[str, float]:
         """Execute the NLL minimisation, and persiste the result to dict"""
-        # build the workspace spec
-        self.spec = self.build_workspace()
+
+        # NOTE: interface with cabinetry; not sure how to avoid writing and building the workspace yet
+        self.build_workspace()
+        workspace_path = "workspace.json"
+        self.export_workspace(filename=workspace_path)
+        ws = cabinetry.workspace.load(workspace_path)
+        model, data = cabinetry.model_utils.model_and_data(ws)
 
         # accordingly, create the pyhf model
-        self.model = pyhf.Model(self.spec)
+        self.model = model
 
         # minimize the negative log likelihood
-        self.result = pyhf.infer.mle.fit(self.data, self.model)
-
-        # store result to dict
-        self.result_dict = {"fit_result": self.result.tolist()}
+        self.result = cabinetry.fit.fit(model, data)
 
         return self.result
 
-    def visualize(self):
-        fig, ax = plt.subplots(2, 1, figsize=(10, 8))
-        ax[0].plot(self.data, label="Data")
-        ax[0].plot(self.result, label="Fit Result")
-        ax[0].set_xlabel("Bin number")
-        ax[0].set_ylabel("Counts")
-        ax[0].legend()
-        ax[1].plot(
-            (self.data - self.result) / np.sqrt(self.data)
-        )  # compute the pulls, assume poisson error
-        ax[1].set_xlabel("Bin number")
-        ax[1].set_ylabel("Pull")
-        plt.show()
+    # def visualize(self):
+    #     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
+    #     ax[0].plot(self.data, label="Data")
+    #     ax[0].plot(self.result, label="Fit Result")
+    #     ax[0].set_xlabel("Bin number")
+    #     ax[0].set_ylabel("Counts")
+    #     ax[0].legend()
+    #     ax[1].plot(
+    #         (self.data - self.result) / np.sqrt(self.data)
+    #     )  # compute the pulls, assume poisson error
+    #     ax[1].set_xlabel("Bin number")
+    #     ax[1].set_ylabel("Pull")
+    #     plt.show()
 
-    def save_results(self, save: bool = False, filename: str = "results.json"):
-        if save:
-            with open(filename, "w") as file:
-                json.dump(self.result_dict, file)
-        return self.result_dict
+    # def save_results(self, save: bool = False, filename: str = "results.json"):
+    #     if save:
+    #         with open(filename, "w") as file:
+    #             json.dump(self.result_dict, file)
+    #     return self.result_dict
