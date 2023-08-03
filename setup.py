@@ -23,6 +23,6 @@ setup(
         "snakemake",
         "termcolor2",
         "SciencePlots",
-        "cabinetry",
+    "cabinetry",
     ],
 )

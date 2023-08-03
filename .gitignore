@@ -156,3 +156,4 @@ dmypy.json
 *scratch*/
 *pidcalib_output*/
 *.snakemake
+*workspace.json
