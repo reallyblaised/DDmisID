@@ -116,7 +116,7 @@ def plot_hist_2d(h: hist.Hist, axis_1: str, axis_2: str, path: str) -> None:
     plt.savefig(f"{path}/{axis_1}_{axis_2}.png")
 
 
-def pkl_2d(binning: "dict[str: list]", data_cuts: "dict[str: str]", hist: hist.Hist) -> None:
+def pkl_2d(binning: "dict[str: list]", hist: hist.Hist) -> None:
     keys = list(binning.keys())
     num_p_bins, num_eta_bins = len(binning[keys[0]]), len(binning[keys[1]])
     for i, p_bin in enumerate(binning[keys[0]]):
@@ -129,19 +129,14 @@ def pkl_2d(binning: "dict[str: list]", data_cuts: "dict[str: str]", hist: hist.H
                 file_path = file_path_p + f"/{eta_bin}-{binning[keys[1]][j+1]}"
             else:
                 continue # no more bins
-
-            # data_cuts["none"] = None
-            # obs = {}
-            # for s, key in enumerate(data_cuts):
-            #     obs[key] = hist[(i, j, s)]
-            obs = hist[i:i+1, j:j+1, :] # include all reco categories
+            obs = hist[i, j, :] # include all reco categories
 
             Path(file_path).mkdir(parents=True, exist_ok=True)
             with open(f"{file_path}/obs.pkl", "wb") as file:
                 pickle.dump(obs, file)
 
 
-def pkl_3d(binning: "dict[str: list]", data_cuts: "dict[str: str]", hist: hist.Hist) -> None:
+def pkl_3d(binning: "dict[str: list]", hist: hist.Hist) -> None:
     keys = list(binning.keys())
     num_p_bins, num_eta_bins, num_ntracks_bins = len(binning[keys[0]]), len(binning[keys[1]]), len(binning[keys[2]])
     for i, p_bin in enumerate(binning[keys[0]]):
@@ -159,12 +154,7 @@ def pkl_3d(binning: "dict[str: list]", data_cuts: "dict[str: str]", hist: hist.H
                     file_path = file_path_eta + f"/{ntracks_bin}-{binning[keys[2]][k+1]}"
                 else:
                     continue # no more bins
-
-                # data_cuts["none"] = None
-                # obs = {}
-                # for s, key in enumerate(data_cuts):
-                #     obs[key] = hist[(i, j, k, s)] # attach uncertainties -> hist
-                obs = hist[i:i+1, j:j+1, k:k+1, :] # include all reco categories
+                obs = hist[i, j, k, :] # include all reco categories
 
                 Path(file_path).mkdir(parents=True, exist_ok=True)
                 with open(f"{file_path}/obs.pkl", "wb") as file:
@@ -209,8 +199,8 @@ if __name__ == "__main__":
 
     # save obs for every P, ETA, nTracks to pkl file
     if len(binning) == 2:
-        pkl_2d(binning, data_cuts, h)
+        pkl_2d(binning, h)
     elif len(binning) == 3:
-        pkl_3d(binning, data_cuts, h)
+        pkl_3d(binning, h)
     else:
         assert len(binning) not in [2, 3], "inappropriate binning dimensions"

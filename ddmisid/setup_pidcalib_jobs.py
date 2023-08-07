@@ -148,9 +148,9 @@ def generate_jobs(
                         )
 
                     # establish the pidcalib2 command and relative args
-                    scratch_dir = "scratch" # NOTE: ask if necessary/useful for something later 
+                    scratch_dir = "scratch" 
                     Path(scratch_dir).mkdir(parents=True, exist_ok=True)
-                    job_conf = f'lb-conda pidcalib pidcalib2.make_eff_hists --sample {CALIBRATION_SAMPLE} --magnet {magpol} --particle {true_sp_alias} --pid-cut "{RECO_SEL}" --binning-file {binning_path} --output-dir {scratch_dir}/{region_id}'
+                    job_conf = f'lb-conda pidcalib pidcalib2.make_eff_hists --sample {CALIBRATION_SAMPLE} --magnet {magpol} --particle {true_sp_alias} --pid-cut "{RECO_SEL}" --binning-file {binning_path} --output-dir {sp_outdir}/{namespace}'
                     for bv in BINNING_VARS:
                         job_conf += f" --bin-var {bv}"
 
@@ -175,16 +175,19 @@ def generate_jobs(
                     # pipe command to bashfile
                     sh_file.write(f"{job_conf}")
 
-                    # # save to pkl
-                    # sh_file.write(f'\npidcalib2.pklhisto2root "{sp_outdir}/{namespace}/perf.pkl"')
-
                     sh_file.write(
                         f" \ntouch {sp_outdir}/{namespace}/pidcalib-setup.done && \n"
                     )  # placeholder filler to signal complete execution of pidcalib2
 
-                    # HACK: rename so that all root tuples are called the same - helps with the snake pipeline
-                    epilogue = f"""for f in {sp_outdir}/{namespace}/*.root; do\nmv \"$f\" {sp_outdir}/{namespace}/perfHist.root\ndone
+                    # # HACK: rename so that all root tuples are called the same - helps with the snake pipeline
+                    # epilogue = f"""for f in {sp_outdir}/{namespace}/*.root; do\nmv \"$f\" {sp_outdir}/{namespace}/perfHist.root\ndone
+                    # """
+
+                    # epilogue = f"""for f in /work/submit/kakura/DDmisID/scratch/; do\nmv \"$f\" {sp_outdir}/{namespace}/perf.pkl\ndone
+                    # """
+                    epilogue = f"""for f in {sp_outdir}/{namespace}/*.pkl; do\nmv \"$f\" {sp_outdir}/{namespace}/perf.pkl\ndone
                     """
+
                     sh_file.write(epilogue + "\n")
                     sh_file.close()
 
