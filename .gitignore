@@ -130,7 +130,7 @@ dmypy.json
 
 # custom
 *deprecated*
-*temp*
+temp*
 *binning*
 *tmp*
 *lock*

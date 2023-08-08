@@ -22,10 +22,10 @@ pid:
     kaon    : "K"
     pion    : "Pi"
     proton  : "P"
-    electron: "e_B_Jpsi"
+    # electron: "e_B_Jpsi"
   
   # year-specific configuration
-  years : ["2016"] #, "2017", "2018"]
+  years : ["2018"] #, "2017", "2018"]
   magpols : ["up", "down"] # follow pidcalib2 syntax
   
   # PIDCALIB section: adopt pidcalib syntax to extract efficiencies from calibration data
@@ -45,7 +45,7 @@ pid:
     kaon_like      : "_ProbNNghost<0.1 & DLLK>0.0 & (DLLK-DLLp)>0.0 & (DLLK-DLLe)>0.0"
     pion_like      : "_ProbNNghost<0.1 & DLLK<0.0 & DLLp<0.0 & DLLe<0.0"
     proton_like    : "_ProbNNghost<0.1 & DLLp>0.0 & (DLLp-DLLK)>0.0 & (DLLp-DLLe)>0.0"
-    electron_like  : "_ProbNNghost<0.1 & DLLe>0.0 & (DLLe-DLLK)>0.0 & (DLLe-DLLp)>0.0"
+    # electron_like  : "_ProbNNghost<0.1 & DLLe>0.0 & (DLLe-DLLK)>0.0 & (DLLe-DLLp)>0.0"
   
   # DATA section: cuts applied to the hadron enriched *data*: the syntax must reflect the branch names in the user-defined ntuple
   # ---------------------------------------------------------------------------------------------------------------
