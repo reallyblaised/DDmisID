@@ -105,6 +105,3 @@ def test_illegal_input(template_maker, reco_categories, eff_hists):
 #         num_bins *= len(binning_axis)-1
 #     assert len(template_file_paths) == num_bins, "incorrect number of files generated"
 #     shutil.rmtree("tests/test_templates")
-    
-
-

@@ -98,7 +98,7 @@ def pkl_2d(binning: "dict[str: list]", hist: hist.Hist, species: str, path: Unio
     for i, p_bin in enumerate(binning[keys[0]]):
         if i < num_p_bins-1:
             if path is None:
-                file_path_p = f"obs/{p_bin}-{binning[keys[0]][i+1]}"
+                file_path_p = f"templates/{p_bin}-{binning[keys[0]][i+1]}"
             else:
                 file_path_p = f"{path}/{p_bin}-{binning[keys[0]][i+1]}"
         else:
@@ -121,7 +121,7 @@ def pkl_3d(binning: "dict[str: list]", hist: hist.Hist, species: str, path: Unio
     for i, p_bin in enumerate(binning[keys[0]]):
         if i < num_p_bins-1:
             if path is None:
-                file_path_p = f"obs/{p_bin}-{binning[keys[0]][i+1]}"
+                file_path_p = f"templates/{p_bin}-{binning[keys[0]][i+1]}"
             else:
                 file_path_p = f"{path}/{p_bin}-{binning[keys[0]][i+1]}"
         else:
@@ -155,6 +155,10 @@ class ProtonTemplateMaker(HadronTemplateMaker):
     pass
 
 
+class ElectronTemplateMaker(HadronTemplateMaker):
+    pass
+
+
 class TemplateMakerFactory:
     """
     Factory class for TemplateMaker selection.
@@ -166,7 +170,8 @@ class TemplateMakerFactory:
         self._creators = {
             "kaon": KaonTemplateMaker,
             "pion": PionTemplateMaker,
-            "proton": ProtonTemplateMaker
+            "proton": ProtonTemplateMaker,
+            "electron": ElectronTemplateMaker,
         }
     
 
