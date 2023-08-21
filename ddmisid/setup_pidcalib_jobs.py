@@ -148,16 +148,15 @@ def generate_jobs(
                         )
 
                     # establish the pidcalib2 command and relative args
-                    scratch_dir = "scratch" 
-                    Path(scratch_dir).mkdir(parents=True, exist_ok=True)
-
                     job_conf = f'source /cvmfs/lhcb.cern.ch/lib/LbEnv &&\nlb-conda pidcalib pidcalib2.make_eff_hists --sample {CALIBRATION_SAMPLE} --magnet {magpol} --particle {true_sp_alias} --pid-cut "{RECO_SEL}" --binning-file {binning_path} --output-dir {sp_outdir}/{namespace}'
+                    
+                    # job_conf = f'lb-conda pidcalib pidcalib2.make_eff_hists --sample {CALIBRATION_SAMPLE} --magnet {magpol} --particle {true_sp_alias} --pid-cut "{RECO_SEL}" --binning-file {binning_path} --output-dir {sp_outdir}/{namespace}'
 
                     for bv in BINNING_VARS:
                         job_conf += f" --bin-var {bv}"
 
                     # if booked test, run over one calibration file only
-                    if opts.test:
+                    if is_test:
                         job_conf += " --max-files 1"
 
                     # need to preserve the selection info to read in the eff histograms from root fike
@@ -175,8 +174,7 @@ def generate_jobs(
                     sh_file = open(f"{sp_outdir}/{namespace}/run.sh", "w")
 
                     # pipe command to bashfile
-
-                    sh_file.write(f"{job_conf}")
+                    sh_file.write(f"{job_conf} &&\n")
 
                     sh_file.write(
                         f"touch {sp_outdir}/{namespace}/pidcalib2.make_eff_hists.done"
@@ -185,10 +183,7 @@ def generate_jobs(
                     # # HACK: rename so that all root tuples are called the same - helps with the snake pipeline
                     # epilogue = f"""for f in {sp_outdir}/{namespace}/*.root; do\nmv \"$f\" {sp_outdir}/{namespace}/perfHist.root\ndone
                     # """
-
-                    # epilogue = f"""for f in /work/submit/kakura/DDmisID/scratch/; do\nmv \"$f\" {sp_outdir}/{namespace}/perf.pkl\ndone
-                    # """
-                    epilogue = f"""for f in {sp_outdir}/{namespace}/*.pkl; do\nmv \"$f\" {sp_outdir}/{namespace}/perf.pkl\ndone
+                    epilogue = f"""\nfor f in {sp_outdir}/{namespace}/*.pkl; do\nmv \"$f\" {sp_outdir}/{namespace}/perf.pkl\ndone
                     """
 
                     sh_file.write(epilogue + "\n")
@@ -207,19 +202,209 @@ def generate_jobs(
                         )
 
 
+@timing
+@check_mu_region
+def generate_he_jobs(
+    pid_config: dict,
+    region_id: str,  # allowed values: "antimu_id", "mu_id"
+    parent_outdir: str = "bin",
+    verbose: bool = False,
+    test: bool = True,
+) -> None:
+    """Generate the executable for pidcalib2 jobs.
+
+    Parameters
+    ----------
+    pid_config : dict
+        Read-in user-defined config
+
+    region_id : str
+        The region identifier (hadron-enriched or signal). Allowed values: "antimu_id", "mu_id"
+
+    verbose: bool
+
+    Returns
+    -------
+    None
+        Generates the appropriate bash file for pidcalib2 jobs
+    """
+    # establish the reco criteria: whether reco partitions of HE, or signal
+    reco_set = match_muid_criteria(region_id, pid_config)
+
+    # having read the config, write a suitable json file
+    for y in pid_config["years"]:
+        # generate the per-year binning file, and pass the binning json file path
+        binning_path = BinningGenerator(path="config/main.yml").build(year=y)
+
+        for true_sp_id, true_sp_alias in pid_config["species"].items():  # true hadrons, ghosts, electons whose abundance must be extracted
+            for magpol in pid_config["magpols"]:
+                # differentiate between electron and hadrons for calibration samples
+                if true_sp_id != "electron":
+                    CALIBRATION_SAMPLE = getattr(CalibSamples(), f"hadron_{y}")
+                if true_sp_id == "electron":
+                    CALIBRATION_SAMPLE = getattr(CalibSamples(), f"e_{y}")
+
+                # book the binning variables, with per-year appropriate
+                BINNING_VARS = getattr(BinningVars(), f"_{y}")
+
+                # based on the desidered category, the pid, occupancy & kinematic selection criteria are different
+                if region_id == "antimu_id":
+                    RECO_SEL = f"{getattr(MCTunings(), f'_{y}')}{pid_config['he_all']} & {pid_config[region_id]} & {pid_config['common_sel']}"
+
+                # HACK: there is an exception for e 2016
+                if true_sp_id == "e_B_Jpsi" and y == "2016":
+                    BINNING_VARS = getattr(
+                        BinningVars(), f"e_2012"
+                    )  # apparently Brunel prefix does not apply in this case
+
+                # produce summary
+                if verbose:
+                    print(tc("Pidcalib jobs config summary:").underline.yellow)
+                    print(
+                        f"""\n* year: {y}\n* polarity: {magpol}\n* calib species: {true_sp_alias}\n* calibration sample: {CALIBRATION_SAMPLE }\
+                        \n* binning variables: {BINNING_VARS}\n* reco selection: {RECO_SEL}\n
+                    
+                    """
+                    )
+
+                # proceed with writing job executable
+                # -----------------------------------
+                # book a suitable directory
+                sp_outdir = f"{parent_outdir}/{y}/{magpol}/{region_id}/{true_sp_id}"
+                namespace = f"all"
+
+                # clean up the directory to remove relic jobs
+                try:
+                    os.system(f"rm -rf {parent_outdir}/{namespace}")
+                    Path(f"{sp_outdir}/{namespace}").mkdir(
+                        parents=True, exist_ok=True
+                    )
+                except:
+                    Path(f"{sp_outdir}/{namespace}").mkdir(
+                        parents=True, exist_ok=True
+                    )
+
+                # establish the pidcalib2 command and relative args
+                job_conf = f'source /cvmfs/lhcb.cern.ch/lib/LbEnv &&\nlb-conda pidcalib pidcalib2.make_eff_hists --sample {CALIBRATION_SAMPLE} --magnet {magpol} --particle {true_sp_alias} --pid-cut "{RECO_SEL}" --binning-file {binning_path} --output-dir {sp_outdir}/{namespace}'
+                
+                # job_conf = f'lb-conda pidcalib pidcalib2.make_eff_hists --sample {CALIBRATION_SAMPLE} --magnet {magpol} --particle {true_sp_alias} --pid-cut "{RECO_SEL}" --binning-file {binning_path} --output-dir {sp_outdir}/{namespace}'
+
+                for bv in BINNING_VARS:
+                    job_conf += f" --bin-var {bv}"
+
+                # if booked test, run over one calibration file only
+                if is_test:
+                    job_conf += " --max-files 1"
+
+                # need to preserve the selection info to read in the eff histograms from root fike
+                preserv_file = open(
+                    f"{sp_outdir}/{namespace}/preserv.yaml",
+                    "w",
+                )
+                preserv_file.write(f'real     : "{true_sp_alias}"\n')
+                preserv_file.write(f'reco     : "all"\n')
+                preserv_file.write(f'muid     : "{region_id}"\n')
+                preserv_file.write(f'eff_hist : "{true_sp_alias}_all_all"')
+                preserv_file.close()
+
+                # bash file to run PIDCalib
+                sh_file = open(f"{sp_outdir}/{namespace}/run.sh", "w")
+
+                # pipe command to bashfile
+                sh_file.write(f"{job_conf} &&\n")
+
+                sh_file.write(
+                    f"touch {sp_outdir}/{namespace}/pidcalib2.make_eff_hists.done"
+                )  # placeholder filler to signal complete execution of pidcalib2
+
+                # # HACK: rename so that all root tuples are called the same - helps with the snake pipeline
+                # epilogue = f"""for f in {sp_outdir}/{namespace}/*.root; do\nmv \"$f\" {sp_outdir}/{namespace}/perfHist.root\ndone
+                # """
+                epilogue = f"""\nfor f in {sp_outdir}/{namespace}/*.pkl; do\nmv \"$f\" {sp_outdir}/{namespace}/perf.pkl\ndone
+                """
+
+                sh_file.write(epilogue + "\n")
+
+                sh_file.close()
+
+                # make the bash file executable
+                os.chmod(f"{sp_outdir}/{namespace}/run.sh", 0o0777)
+
+                # report successul run
+                if verbose:
+                    print(
+                        tc(
+                            f"Success: generated {sp_outdir}/{namespace}/run.sh"
+                        ).green
+                    )
+
+
+def pidcalib_jobs_selector(job_type: str) -> None: # execute pertinent function  
+    if job_type=="reco":
+        for id in ("antimu_id", "mu_id"):
+            generate_jobs(
+                pid_config=read_config("config/main.yml", key="pid"),
+                region_id=id,
+            )
+    elif job_type=="he_all":
+        generate_he_jobs(
+            pid_config=read_config("config/main.yml", key="pid"),
+            region_id="antimu_id"
+        )
+    else: 
+     raise KeyError("PID mode identifier not allowed")
+
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PIDCalib jobs generator")
     parser.add_argument(
         "-t", "--test", action="store_true", help="Run pidcalib2 with --max-files==1"
     )
-    opts = parser.parse_args()
+    parser.add_argument("-p", "--pid_regime", type=str, choices = ["reco", "he_all"], action="append", 
+        help="Run pidcalib2 in region of interect. Valid arguments: `reco`, `he_all`, with the former applying reco partitions to the sample of interest.")
+    is_test = parser.parse_args().test # TODO: check with blaise about attribute
 
     # establish the credentials to access eos
     os.system(f"kinit {read_config('config/main.yml', key='user_id')}@CERN.CH")
 
     # generate the pidcalib2 jobs in the hadron-enriched region and extrapolation to signal
-    for id in ("antimu_id", "mu_id"):
-        generate_jobs(
-            pid_config=read_config("config/main.yml", key="pid"),
-            region_id=id,
-        )
+    for pr in parser.parse_args().pid_regime:
+        pidcalib_jobs_selector(job_type = pr) # TODO: ask about advantage of running in selector vs returning function
+
+# def pidcalib_jobs_selector(job_type: str): # TODO: return functions instead of running in here
+#     if job_type in ["reco", "--reco"]:
+#         for id in ("antimu_id", "mu_id"):
+#             generate_jobs(
+#                 pid_config=read_config("config/main.yml", key="pid"),
+#                 region_id=id,
+#             )
+#     elif job_type in ["he_all", "--he_all"]:
+#         generate_he_jobs(
+#             pid_config=read_config("config/main.yml", key="pid"),
+#             region_id="antimu_id"
+#         )
+
+
+
+# if __name__ == "__main__":
+#     parser = argparse.ArgumentParser(description="PIDCalib jobs generator")
+#     parser.add_argument(
+#         "-t", "--test", action="store_true", help="Run pidcalib2 with --max-files==1"
+#     )
+#     parser.add_argument("job_type", type=str, 
+#         help="Run pidcalib2 with either --reco or --he_all")
+#     is_test = parser.parse_args().test # TODO: check with blaise about attribute
+#     job_type = parser.parse_args().job_type
+
+#     # establish the credentials to access eos
+#     os.system(f"kinit {read_config('config/main.yml', key='user_id')}@CERN.CH")
+
+#     # generate the pidcalib2 jobs in the hadron-enriched region and extrapolation to signal
+#     pidcalib_jobs_selector(job_type) # TODO: ask about advantage of running in selector vs returning function
+#     # for id in ("antimu_id", "mu_id"):
+#     #     generate_jobs(
+#     #         pid_config=read_config("config/main.yml", key="pid"),
+#     #         region_id=id,
+#     #     )
+
