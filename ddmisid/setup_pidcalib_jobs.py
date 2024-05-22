@@ -58,6 +58,8 @@ def match_muid_criteria(
         return list(pid_config["reco_cuts"].keys())
     elif region_id == "mu_id":  # signal selection
         return ["muon_like"]
+    else:
+        raise ValueError("Invalid region_id; must be either 'antimu_id' or 'mu_id'")
 
 
 @timing
@@ -149,7 +151,7 @@ def generate_jobs(
 
                     # establish the pidcalib2 command and relative args
                     job_conf = f'source /cvmfs/lhcb.cern.ch/lib/LbEnv &&\nlb-conda pidcalib pidcalib2.make_eff_hists --sample {CALIBRATION_SAMPLE} --magnet {magpol} --particle {true_sp_alias} --pid-cut "{RECO_SEL}" --binning-file {binning_path} --output-dir {sp_outdir}/{namespace}'
-                    
+
                     # job_conf = f'lb-conda pidcalib pidcalib2.make_eff_hists --sample {CALIBRATION_SAMPLE} --magnet {magpol} --particle {true_sp_alias} --pid-cut "{RECO_SEL}" --binning-file {binning_path} --output-dir {sp_outdir}/{namespace}'
 
                     for bv in BINNING_VARS:
@@ -236,7 +238,9 @@ def generate_he_jobs(
         # generate the per-year binning file, and pass the binning json file path
         binning_path = BinningGenerator(path="config/main.yml").build(year=y)
 
-        for true_sp_id, true_sp_alias in pid_config["species"].items():  # true hadrons, ghosts, electons whose abundance must be extracted
+        for true_sp_id, true_sp_alias in pid_config[
+            "species"
+        ].items():  # true hadrons, ghosts, electons whose abundance must be extracted
             for magpol in pid_config["magpols"]:
                 # differentiate between electron and hadrons for calibration samples
                 if true_sp_id != "electron":
@@ -276,17 +280,13 @@ def generate_he_jobs(
                 # clean up the directory to remove relic jobs
                 try:
                     os.system(f"rm -rf {parent_outdir}/{namespace}")
-                    Path(f"{sp_outdir}/{namespace}").mkdir(
-                        parents=True, exist_ok=True
-                    )
+                    Path(f"{sp_outdir}/{namespace}").mkdir(parents=True, exist_ok=True)
                 except:
-                    Path(f"{sp_outdir}/{namespace}").mkdir(
-                        parents=True, exist_ok=True
-                    )
+                    Path(f"{sp_outdir}/{namespace}").mkdir(parents=True, exist_ok=True)
 
                 # establish the pidcalib2 command and relative args
                 job_conf = f'source /cvmfs/lhcb.cern.ch/lib/LbEnv &&\nlb-conda pidcalib pidcalib2.make_eff_hists --sample {CALIBRATION_SAMPLE} --magnet {magpol} --particle {true_sp_alias} --pid-cut "{RECO_SEL}" --binning-file {binning_path} --output-dir {sp_outdir}/{namespace}'
-                
+
                 # job_conf = f'lb-conda pidcalib pidcalib2.make_eff_hists --sample {CALIBRATION_SAMPLE} --magnet {magpol} --particle {true_sp_alias} --pid-cut "{RECO_SEL}" --binning-file {binning_path} --output-dir {sp_outdir}/{namespace}'
 
                 for bv in BINNING_VARS:
@@ -333,27 +333,23 @@ def generate_he_jobs(
                 # report successul run
                 if verbose:
                     print(
-                        tc(
-                            f"Success: generated {sp_outdir}/{namespace}/run.sh"
-                        ).green
+                        tc(f"Success: generated {sp_outdir}/{namespace}/run.sh").green
                     )
 
 
-def pidcalib_jobs_selector(job_type: str) -> None: # execute pertinent function  
-    if job_type=="reco":
+def pidcalib_jobs_selector(job_type: str) -> None:  # execute pertinent function
+    if job_type == "reco":
         for id in ("antimu_id", "mu_id"):
             generate_jobs(
                 pid_config=read_config("config/main.yml", key="pid"),
                 region_id=id,
             )
-    elif job_type=="he_all":
+    elif job_type == "he_all":
         generate_he_jobs(
-            pid_config=read_config("config/main.yml", key="pid"),
-            region_id="antimu_id"
+            pid_config=read_config("config/main.yml", key="pid"), region_id="antimu_id"
         )
-    else: 
-     raise KeyError("PID mode identifier not allowed")
-
+    else:
+        raise KeyError("PID mode identifier not allowed")
 
 
 if __name__ == "__main__":
@@ -361,16 +357,24 @@ if __name__ == "__main__":
     parser.add_argument(
         "-t", "--test", action="store_true", help="Run pidcalib2 with --max-files==1"
     )
-    parser.add_argument("-p", "--pid_regime", type=str, choices = ["reco", "he_all"], action="append", 
-        help="Run pidcalib2 in region of interect. Valid arguments: `reco`, `he_all`, with the former applying reco partitions to the sample of interest.")
-    is_test = parser.parse_args().test # TODO: check with blaise about attribute
+    parser.add_argument(
+        "-p",
+        "--pid_regime",
+        type=str,
+        choices=["reco", "he_all"],
+        action="append",
+        help="Run pidcalib2 in region of interect. Valid arguments: `reco`, `he_all`, with the former applying reco partitions to the sample of interest.",
+    )
+    is_test = parser.parse_args().test  # TODO: check with blaise about attribute
 
     # establish the credentials to access eos
     os.system(f"kinit {read_config('config/main.yml', key='user_id')}@CERN.CH")
 
     # generate the pidcalib2 jobs in the hadron-enriched region and extrapolation to signal
     for pr in parser.parse_args().pid_regime:
-        pidcalib_jobs_selector(job_type = pr) # TODO: ask about advantage of running in selector vs returning function
+        pidcalib_jobs_selector(
+            job_type=pr
+        )  # TODO: ask about advantage of running in selector vs returning function
 
 # def pidcalib_jobs_selector(job_type: str): # TODO: return functions instead of running in here
 #     if job_type in ["reco", "--reco"]:
@@ -386,13 +390,12 @@ if __name__ == "__main__":
 #         )
 
 
-
 # if __name__ == "__main__":
 #     parser = argparse.ArgumentParser(description="PIDCalib jobs generator")
 #     parser.add_argument(
 #         "-t", "--test", action="store_true", help="Run pidcalib2 with --max-files==1"
 #     )
-#     parser.add_argument("job_type", type=str, 
+#     parser.add_argument("job_type", type=str,
 #         help="Run pidcalib2 with either --reco or --he_all")
 #     is_test = parser.parse_args().test # TODO: check with blaise about attribute
 #     job_type = parser.parse_args().job_type
@@ -407,4 +410,3 @@ if __name__ == "__main__":
 #     #         pid_config=read_config("config/main.yml", key="pid"),
 #     #         region_id=id,
 #     #     )
-

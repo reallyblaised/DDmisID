@@ -37,6 +37,7 @@ class HadronTemplateMaker(TemplateMaker):
 
     
     def _get_eff_hists(self, species_path: str) -> "dict[str: hist.Hist]":
+        """Source the PIDCalib2 efficiency histograms for the given species."""
         eff_hists_dict = {}
         for reco in self.template_bins:
             eff_hists_dict[reco] = self._open_eff_hist(f"{species_path}/{reco}/perf.pkl")
@@ -44,6 +45,7 @@ class HadronTemplateMaker(TemplateMaker):
 
 
     def _open_eff_hist(self, eff_hist_path: str) -> hist.Hist:
+        """Load the efficiency histogram from the given path."""
         with open(f"{eff_hist_path}", "rb") as file:
             eff_hist = pickle.load(file)
         return eff_hist
@@ -51,7 +53,7 @@ class HadronTemplateMaker(TemplateMaker):
 
     def make_hist(self) -> hist.Hist:
         """
-        Uses given PIDCalib efficiency histograms to 
+        Book the histogram axes
         """
         hist_axes = [ binning_axis for binning_axis in self.eff_hists[self.template_bins[0]].axes ]
         hist_axes.append(
@@ -72,11 +74,13 @@ class HadronTemplateMaker(TemplateMaker):
 
     
     def get_hist(self) -> hist.Hist:
+        """Source hist"""
         assert self.hist is not None, f"must run get_hist method on {self}"
         return self.hist
     
 
     def save_templates(self, binning: "dict[str: list]", path: Union[str, None] = None) -> None:
+        """Save the templates to a directory structure based on the binning."""
         assert self.hist is not None, f"must run get_hist method on {self}"
         
         hist_axes = [ binning_axis for binning_axis in self.eff_hists[self.template_bins[0]].axes ]
@@ -201,7 +205,7 @@ if __name__ == "__main__":
     for species in reco_categories:
         templates = TemplateMakerFactory().create_maker(species)(
             path_prefix, species, reco_categories
-        )
+        ) # each reco species in the hadron-enriched sample -> each reco category PID eff, eg K->{K, π, p, e} @ !mu
         templates.make_hist()
         templates.save_templates(binning)
         
