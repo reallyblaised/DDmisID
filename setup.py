@@ -23,5 +23,6 @@ setup(
         "snakemake",
         "termcolor2",
         "SciencePlots",
+        "uncertainties"
     ],
 )

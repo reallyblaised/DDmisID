@@ -6,179 +6,137 @@ from abc import ABC, abstractmethod
 import pandas as pd
 import numpy as np
 import hist
-
 import matplotlib.pyplot as plt  # might not have a need for this import
-from ddmisid.utils import read_config, load_ntuple
+from ddmisid.utils import read_config, load_ntuple, extract_sel_dict_branches
 from pathlib import Path
 import argparse
 import pickle
+import pandas as pd
+import hist
+from hist import Hist
+from functools import partial
+from pathlib import Path
+import scienceplots
+import matplotlib.pyplot as plt
+
+plt.style.use(["science", "no-latex"])
 
 
-class Discretizer(ABC):
+class Discretizer:
     """
-    Abstract base class for discretizing some dataset into bins desired by the user.
-    """
-
-    @abstractmethod
-    def discretize(self, data: pd.DataFrame, sel_cut: str) -> None:
-        """
-        Abstract method enforcing that all subclasses of Discretizer must have the discretize method.
-        """
-        pass
-
-
-# TODO: consider whether OrderedDicts would be desirable here
-class DataDiscretizer(Discretizer):
-    """
-    User interface for discretizing some dataset into bins as specified by the user with a config file.
+    Base class for discretizing data into user-specified binnings.
     """
 
     def __init__(
         self,
-        binning: "dict[str: list]",
-        data_cuts: "dict[str: str]",
+        binning: dict,
+        reco_cuts: dict,
         data: pd.DataFrame,
-    ) -> None:
-        """
-        Initializes a DataDiscretizer object equipped with parameters for discretizing data.
-        """
-        self.binning = binning
-        self.data_cuts = data_cuts
-        self.data = data
-        self.preprocess = pd.DataFrame()
-        self._df_preprocessing(self.data_cuts)
-        self.hist = None
+        reco_label: str = "reco",
+    ):
+        self._binning = binning  # kinematics and occupancy binning
+        self._reco_cuts = (
+            reco_cuts  # ideally mutually exclusive reco categories pure in one species
+        )
+        self._data = data  # hadron-enriched dataset
+        self.reco_label = reco_label
+        self._hist = self.discretize()
 
-    def _df_preprocessing(self, data_cuts: "dict[str: str]") -> None:
-        """
-        Internal method for preprocessing of data according to user-specified data cuts.
-        Explicit calling by user is never necessary.
-        """
-        none_apply_expr = ""
-        for cut, expr in data_cuts.items():
-            self.preprocess[cut] = self.data.eval(expr)
-            if none_apply_expr == "":
-                none_apply_expr += (
-                    f"not (({expr})"  # beginning of none apply expression
-                )
-            else:
-                none_apply_expr += f"|({expr})"
-        none_apply_expr += ")"  # close outer expression
-        self.preprocess["none"] = self.data.eval(none_apply_expr)
+    @property
+    def binning(self):
+        return self._binning
 
-    def add_cuts(self, data_cuts: "dict[str: str]") -> None:
-        """
-        Add additional cuts to consider in Discretizer.
-        """
-        self.data_cuts.update(data_cuts)
-        self._df_preprocessing(data_cuts)
+    @binning.setter
+    def binning(self, binning: dict):
+        self._binning = binning
 
-    def discretize(self, verbose: bool = False) -> hist.Hist:
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, data: pd.DataFrame):
+        self._data = data
+
+    @property
+    def reco_cuts(self):
+        return self._reco_cuts
+
+    @reco_cuts.setter
+    def reco_cuts(self, reco_cuts: dict):
+        self._reco_cuts = reco_cuts
+
+    @property
+    def hist(self):
+        return self._hist
+
+    def assign_reco_id(self):
         """
-        Discretizes data into user-specified bins. Returns a Hist histogram.
+        Adds a new column 'reco' to the data, categorizing each row based on reco_cuts.
+        Each row is evaluated against the conditions, and the first match assigns the label.
+        If no conditions match, the label is 'Unclassified'.
         """
-        hist_axes = []
-        # binning axes
-        for dim in self.binning:
-            hist_axes.append(
-                hist.axis.Variable(edges=self.binning[dim], name=dim, label=dim)
-            )
-        # data cuts axis
-        hist_axes.append(
+        # Initialize the 'reco' column with 'Unclassified'
+        self.data["reco"] = "ghost"
+
+        # Loop through each particle type and its associated condition
+        for particle, condition in self.reco_cuts.items():
+            # Create a mask where the condition is true
+            mask = self.data.eval(condition)
+            # Where the mask is true and 'reco' is still 'Unclassified', assign the particle label
+            self.data.loc[mask & (self.data["reco"] == "ghost"), "reco"] = particle
+
+    def book_histogram(self):
+        """
+        Book a 4D hist with the specified kinematics, occupancy and reco-category bins/partitions
+        """
+        return Hist(
+            hist.axis.Variable(
+                list(self.binning.values())[0], name=list(self.binning.keys())[0]
+            ),
+            hist.axis.Variable(
+                list(self.binning.values())[1], name=list(self.binning.keys())[1]
+            ),
+            hist.axis.Variable(
+                list(self.binning.values())[2], name=list(self.binning.keys())[2]
+            ),
             hist.axis.StrCategory(
-                self.preprocess.columns, name="data cuts", label="data cuts"
-            )
+                list(self.reco_cuts.keys()) + ["ghost"],
+                name=self.reco_label,
+            ),
         )
-        histogram = hist.Hist(*hist_axes)
-        # create array with strings as values
-        data_cuts_labels = np.where(self.preprocess, self.preprocess.columns, "").sum(
-            axis=1
-        )  # NOTE: assumes cuts are orthogonal
-        # fill histogram
-        histogram.fill(
-            *[self.data[col] for col in self.binning.keys()], data_cuts_labels
+
+    def discretize(self):
+        """
+        Fill the histogram with the data, in bins of occupancy, kinematics and reco-category
+        """
+        self.assign_reco_id()
+        hist = self.book_histogram()
+        hist.fill(
+            self.data[list(self.binning.keys())[0]],
+            self.data[list(self.binning.keys())[1]],
+            self.data[list(self.binning.keys())[2]],
+            self.data["reco"],
         )
-        self.hist = histogram
-        if verbose:
-            print(histogram)
-        return histogram
+        return hist
 
-    def get_hist(self) -> hist.Hist:
+    @staticmethod
+    def save_histogram(hist, path: str):
         """
-        Returns histogram created after discretizing data using the discretize method.
+        Save the discretizer to a pickle file.
         """
-        assert self.hist is not None, f"must run discretize method on {self}"
-        return self.hist
+        parent_dir = Path(path).parent
+        parent_dir.mkdir(parents=True, exist_ok=True)
+        with open(path, "wb") as f:
+            pickle.dump(hist, f)
 
-    def __str__(self) -> str:
-        return f"DataDiscretizer({self.hist})"
-
-
-def plot_hist_1d(h: hist.Hist, axis: str, path: str) -> None:
-    _, ax = plt.subplots(figsize=(6, 4))
-    h.plot1d(ax=ax, ls="--", color="teal", lw=3)
-
-    Path(f"{path}").mkdir(parents=True, exist_ok=True)
-    plt.savefig(f"{path}/{axis}.png")
-
-
-def plot_hist_2d(h: hist.Hist, axis_1: str, axis_2: str, path: str) -> None:
-    _, ax = plt.subplots(figsize=(6, 6))
-    h.plot2d(ax=ax, cmap="plasma")
-
-    Path(f"{path}").mkdir(parents=True, exist_ok=True)
-    plt.savefig(f"{path}/{axis_1}_{axis_2}.png")
-
-
-def pkl_2d(binning: "dict[str: list]", hist: hist.Hist) -> None:
-    keys = list(binning.keys())
-    num_p_bins, num_eta_bins = len(binning[keys[0]]), len(binning[keys[1]])
-    for i, p_bin in enumerate(binning[keys[0]]):
-        if i < num_p_bins - 1:
-            file_path_p = f"obs/{p_bin}-{binning[keys[0]][i+1]}"
-        else:
-            continue  # no more bins
-        for j, eta_bin in enumerate(binning[keys[1]]):
-            if j < num_eta_bins - 1:
-                file_path = file_path_p + f"/{eta_bin}-{binning[keys[1]][j+1]}"
-            else:
-                continue  # no more bins
-            obs = hist[i, j, :]  # include all reco categories
-
-            Path(file_path).mkdir(parents=True, exist_ok=True)
-            with open(f"{file_path}/obs.pkl", "wb") as file:
-                pickle.dump(obs, file)
-
-
-def pkl_3d(binning: "dict[str: list]", hist: hist.Hist) -> None:
-    keys = list(binning.keys())
-    num_p_bins, num_eta_bins, num_ntracks_bins = (
-        len(binning[keys[0]]),
-        len(binning[keys[1]]),
-        len(binning[keys[2]]),
-    )
-    for i, p_bin in enumerate(binning[keys[0]]):
-        if i < num_p_bins - 1:
-            file_path_p = f"obs/{p_bin}-{binning[keys[0]][i+1]}"
-        else:
-            continue  # no more bins
-        for j, eta_bin in enumerate(binning[keys[1]]):
-            if j < num_eta_bins - 1:
-                file_path_eta = file_path_p + f"/{eta_bin}-{binning[keys[1]][j+1]}"
-            else:
-                continue  # no more bins
-            for k, ntracks_bin in enumerate(binning[keys[2]]):
-                if k < num_ntracks_bins - 1:
-                    file_path = (
-                        file_path_eta + f"/{ntracks_bin}-{binning[keys[2]][k+1]}"
-                    )
-                else:
-                    continue  # no more bins
-                obs = hist[i, j, k, :]  # include all reco categories
-
-                Path(file_path).mkdir(parents=True, exist_ok=True)
-                with open(f"{file_path}/obs.pkl", "wb") as file:
-                    pickle.dump(obs, file)
+    @staticmethod
+    def load_hist(path: str):
+        """
+        Load a discretizer from a pickle file.
+        """
+        with open(path, "rb") as f:
+            return pickle.load(f)
 
 
 if __name__ == "__main__":
@@ -192,15 +150,19 @@ if __name__ == "__main__":
 
     # get binning, data cuts, selection cuts from config file
     pid_config = read_config("config/main.yml", key="pid")
-    antimu_id, common_sel = pid_config["antimu_id"], pid_config["common_sel"]
-    binning_no_prefix, data_cuts = pid_config["binning"], pid_config["data_cuts"]
+    binning_no_prefix, data_cuts = (
+        pid_config["binning"],
+        pid_config["data_cuts"],
+    )  # binning (no prefix); full set of cuts for hadron-enriched partiions (comprises common sel between HE and signal)
     root_key, root_tree_name = (
         pid_config["root_config"]["root_key"],
         pid_config["root_config"]["root_tree_name"],
     )
-    data_prefixes = pid_config["data_prefixes"]
+    data_prefixes = pid_config[
+        "data_prefixes"
+    ]  # prepended to each binning variable -> get data-compatible binning selections
 
-    # rename binning variables to include prefixes used in root file
+    # rename binning variables to include prefixes used in the hadron-enriched data file
     binning = {}
     for key, prefix in data_prefixes.items():
         if prefix:
@@ -208,36 +170,42 @@ if __name__ == "__main__":
         else:
             binning[f"{key}"] = binning_no_prefix[key]
 
-    # load data, apply cuts, and discretize
-    data = load_ntuple(
+    # load data into awkward array for increased speeds - read in only BOI, as will fill obs hist only
+    hadron_enriched_dataset = load_ntuple(
         file_path=data_path,
         key=root_key,
         tree_name=root_tree_name,
-        library="pd",
-        batch_size="200 MB",
         max_entries=None,
+        library="pd",
+        branches=list(
+            set(  # avoid duplication of branches
+                extract_sel_dict_branches(data_cuts) + list(binning.keys())
+            )
+        ),  # extract the inclusive set of branches used in any selection definig the hadron-enriched partitions + binning variables
     )
 
-    # ---------------------------------
-    # define the hadron-enriched region 
-    # ---------------------------------
-    # if common_sel != "": # if common selection tags both the hadron-enriched and signal region, include it
-    #     data_sel = data.query(
-    #         f"{antimu_id} & {common_sel}"
-    #     )  
-    # else:
-    #     data_sel = data.query(f"{antimu_id}")
-    # FIXME
-    data_sel = data # HACK
+    # -------------------------------------------
+    # Discretise the dataset into reco categories
+    # -------------------------------------------
+    d = Discretizer(
+        binning=binning,
+        reco_cuts=data_cuts,  # partition into categorical splits of hadrons, electrongs, ghosts
+        data=hadron_enriched_dataset,
+        reco_label="reco",
+    )
+    reco_h = d.discretize()
 
-    # discretize into 
-    discretizer = DataDiscretizer(binning, data_cuts, data_sel)
-    h = discretizer.discretize()
+    # save the histograms, looping through bins, projecting out the reco category in each bin
+    for i in range(len(reco_h.axes["Mu_plus_P"])):
+        for j in range(len(reco_h.axes["Mu_plus_LK_ETA"])):
+            for k in range(len(reco_h.axes["nTracks"])):
 
-    # save obs for every P, ETA, nTracks to pkl file
-    if len(binning) == 2:
-        pkl_2d(binning, h)
-    elif len(binning) == 3:
-        pkl_3d(binning, h)
-    else:
-        assert len(binning) not in [2, 3], "inappropriate binning dimensions"
+                p_bin = f"{int(reco_h.axes['Mu_plus_P'][i][0])}-{int(reco_h.axes['Mu_plus_P'][i][1])}"
+                eta_bin = f"{reco_h.axes['Mu_plus_LK_ETA'][j][0]}-{reco_h.axes['Mu_plus_LK_ETA'][j][1]}"
+                ntracks_bin = f"{int(reco_h.axes['nTracks'][k][0])}-{int(reco_h.axes['nTracks'][k][1])}"
+
+                # save the histogram
+                d.save_histogram(
+                    hist=reco_h[i, j, k, ...],
+                    path=f"obs/{p_bin}/{eta_bin}/{ntracks_bin}/obs.pkl",
+                )

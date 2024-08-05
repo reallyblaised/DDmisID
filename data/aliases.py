@@ -104,7 +104,9 @@ class BinningVars:
             if "P" in varlist:
                 varlist = list(map(lambda x: x.replace("P", "Brunel_P"), varlist))
             if "nTracks" in varlist:
-                varlist = list(map(lambda x: x.replace("nTracks", "nTracks_Brunel"), varlist))
+                varlist = list(
+                    map(lambda x: x.replace("nTracks", "nTracks_Brunel"), varlist)
+                )
             return varlist
         elif year in ["_2011", "_2012", "_2015"]:
             return varlist

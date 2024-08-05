@@ -35,117 +35,23 @@ mpl.rcParams["axes.prop_cycle"] = mpl.cycler(
 VERSION = "0.1"
 
 
-# plot a fitted model
-# -------------------
-def viz_signal(
-    x: ArrayLike,
-    y: ArrayLike,
-    ax: plt.Axes,
-) -> Callable:
-    """Partially set the ax and datapoints of the visualiser, leaving freedom for color and label"""
-
-    def inner(
-        color: Optional[str] = None,
-        label: str = "Signal",
-    ) -> None:
-        """Viz the signal"""
-        ax.plot(x, y, label=label, color=color, lw=1.0)
-
-    return inner
-
-
-def viz_bkg(
-    x: ArrayLike,
-    ax: plt.Axes,
-    y_hi: Any,
-) -> Callable:
-    """Set the common cosmetics for bkg component(s) in the plot"""
-
-    def inner(
-        color: str,
-        y_lo: Any = 0,
-        label: str = "Background",
-    ) -> None:
-        """Viz the bkg"""
-        ax.fill_between(x, y_lo, y_hi, label=label, color=color, alpha=0.33)
-
-    return inner
-
-
-class VisualizerFactory:
-    """
-    A factory class to visualise the component(s) for a fit model.
-    """
-
-    def __init__(self, mi: Callable, model_config: Callable) -> None:
-        """
-        Initialise the ViewFitRes class
-        Note: mi and model are private attributes
-        """
-        self._mi = mi  # minimiser
-        self._model_config = (
-            model_config  # sources a generic model fed to the minimiser
-        )
-
-    @property
-    def mi(self) -> object:
-        return self._mi
-
-    @property
-    def model(self) -> Callable:
-        return self._model_config
-
-    def plot(
-        self,
-        components: Union[str, List[str]],
-        mrange: Tuple[float, float],
-        ax: plt.Axes,
-        bins: int = 100,
-        **kwargs: Any,
-    ) -> Any:
-        x = np.linspace(*mrange, bins)
-        N = (mrange[1] - mrange[0]) / bins
-
-        # set some cosmetics for the plot
-        ax.set_prop_cycle(plt.cycler("color", plt.cm.viridis(np.linspace(0, 1, 10))))
-
-        if components == "signal":
-            pdf = self._model_config(mrange=mrange, components="signal")(
-                x, *self._mi.values
-            )[
-                1
-            ]  # original function returns yield and pdf
-            # return viz_sig(x, pdf, ax=ax)
-            ax.plot(x, pdf)
-
-        if components == "total":
-            pdf = self._model_config(mrange=mrange, components="total")(
-                x, *self._mi.values
-            )[
-                1
-            ]  # original function returns yield and pdf]
-            # return viz_sig(
-            #     x=x,
-            #     y=100.0 * pdf,
-            #     ax=ax,
-            # )(color="tab:blue", label="Total pdf")
-            ax.plot(x, pdf)
-
-
-# fig, ax factory functions
-# -------------------------
-def simple_ax(
-    title: Optional[str] = "LHCb Unofficial",
+# book the axes for postfit plot 
+# ------------------------------
+def data_pull_plot(
+    title: str | None = f"DDmisID v{VERSION}",
     ylabel: str = "Candidates",
-    normalised: bool = False,
-    scale: Optional[str] = None,
-) -> Tuple[Any, plt.Axes]:
-    """Book simple ax
+    scale: str | None = None,
+    axp_xlabel: str | None = None,
+    axp_ylabel: str = r"Pulls $[\sigma]$",
+    annotation: str | None = None,
+) -> tuple[Any, plt.Axes, plt.Axes]:
+    """
+    Generate 2-ax fig with upper ax for data, lower ax for pulls
 
     Parameters
     ----------
-    title: Optional[str]
-        Title of the plot (default: 'LHCb Unofficial')
+    title: str | None
+        Title of the plot (default: 'LHCb Prelminary')
 
     ylabel: str
         Y-axis label (default: 'Candidates')
@@ -153,82 +59,74 @@ def simple_ax(
     normalised: bool
         If true, normalise histograms to unity (default: False)
 
+    scale: str | None
+        If not None, scale the y-axis by the given scale (default: None)
+
+    axp_xlabel: str
+        x-axis label for the pull plot (default: r'$m_{\textrm{corr}}(D^0\mu^+)$ [MeV/$c^2$]')
+
+    axp_ylabel: str
+        y-axis label for the pull plot (default: r'Pulls $[\sigma]$')
+
+    annotataion: str | None
+        If not None, annotate the plot with the given string (default: None)
+
     Returns
     -------
-    Tuple[Any, Callable]
-        Fig, ax plt.Axes objects
+    tuple[Any, Callable, Callable]
+        fig, ax plt.Axes objects, ax_p plt.Axes
     """
-    fig, ax = plt.subplots()
-
-    ax.set_title(title, loc="right")
-    ax.set_ylabel(ylabel)
-    # logo
-    ax.text(
-        0.0,
-        1.07,
-        r"\textbf{DD}\textit{mis}ID \texttt{v" + VERSION + "}",
-        ha="left",
-        va="top",
-        transform=ax.transAxes,
-        color="grey",
+    fig, (ax, ax_p) = plt.subplots(
+        2,
+        1,
+        gridspec_kw={"height_ratios": [5, 1.2]},
+        sharex=True,
     )
-    if scale is not None:
-        ax.set_yscale(scale)
 
-    return fig, ax
+    # reduce the white space between the two subplots
+    fig.subplots_adjust(hspace=0.05)  # Adjust this value as needed
 
+    # main plt config
+    ax.set_title(title, loc="left", color="tab:grey")
+    ax.set_ylabel(ylabel)
 
-def simple_2ax(
-    title: Optional[str] = "LHCb Unofficial",
-    ylabel: str = "Candidates",
-    normalised: bool = False,
-    scale: Optional[str] = None,
-    logo: bool = True,
-) -> Tuple[Any, plt.Axes, plt.Axes]:
-    """Book simple ax
-
-    Parameters
-    ----------
-    title: Optional[str]
-        Title of the plot (default: 'LHCb Unofficial')
-
-    ylabel: str
-        Y-axis label (default: 'Candidates')
-
-    normalised: bool
-        If true, normalise histograms to unity (default: False)
-
-    Returns
-    -------
-    Tuple[Any, Callable]
-        Fig, ax plt.Axes objects
-    """
-    fig, (ax1, ax2) = plt.subplots(ncols=2, nrows=1, figsize=(8, 2.5))
-
-    for ax in (ax1, ax2):
-        ax.set_title(title, loc="right")
-        # logo
+    # additional annotation
+    if annotation is not None:
         ax.text(
-            0.0,
-            1.07,
-            r"\textbf{DD}\textit{mis}ID \texttt{v" + VERSION + "}",
+            0.03,
+            0.93,
+            annotation,
             ha="left",
             va="top",
             transform=ax.transAxes,
-            color="grey",
+            color="tab:grey",
         )
 
     if scale is not None:
-        ax1.set_yscale(scale)
-        ax1.set_ylabel(ylabel)
+        ax.set_yscale(scale)
 
-    return fig, ax1, ax2
+    # pull plt config
+    ax_p.set_xlabel(axp_xlabel)
+    ax_p.set_ylabel(axp_ylabel)
+    ax_p.set_ylim(-5.5, 5.5)
+
+    ax_p.set_yticks([-3, 0, 3])  # Set y-axis ticks at -3, 0, 3
+    ax_p.tick_params(
+        axis="y", labelsize="small"
+    )  # Set y-axis tick label font size to small
+
+    ax_p.axhline(0, color="tab:grey", lw=0.5, ls="-")
+    ax_p.axhline(3, color="firebrick", lw=0.5, ls="--")
+    ax_p.axhline(-3, color="firebrick", lw=0.5, ls="--")
+
+    return fig, ax, ax_p
 
 
 def make_legend(
     ax: plt.Axes,
     on_plot: bool = True,
     ycoord: float = -0.6,
+    ncols: None | int = None,
 ) -> None:
     """
     Place the legend below the plot, adjusting number of columns
@@ -253,10 +151,14 @@ def make_legend(
     handles, labels = ax.get_legend_handles_labels()
 
     # decide the number of columns accordingly
-    if len(labels) == 2:
-        ncols = 2
-    else:
-        ncols = 1
+    if ncols is None:
+        match len(labels):
+            case 2:
+                ncols = 2
+            case _ if math.fmod(float(len(labels)), 3.0) == 0:
+                ncols = 3
+            case _:
+                ncols = 1
 
     # place the legend
     ax.legend(loc="best")
@@ -292,277 +194,3 @@ def save_to(
     """
     Path(outdir).mkdir(parents=True, exist_ok=True)
     [plt.savefig(f"{outdir}/{name}.{ext}") for ext in ["pdf", "png"]]
-
-
-# plot data and pdfs
-# ------------------
-def fill_hist_w(
-    data: ArrayLike, bins: int, range: tuple, weights: Optional[ArrayLike] = None
-) -> Tuple[Any, ...]:
-    """Fill histogram accounting weights
-
-    Parameters
-    ----------
-    data: ArrayLike
-        Data to be histogrammed
-    bins: int
-        Number of bins
-    range: tuple
-        Range of the histogram
-    weights:Optional[ArrayLike]
-        Weights to be applied to the data (default: None)
-
-    Returns
-    -------
-    nh: ArrayLike
-        Bin contents
-    xe: ArrayLike
-        Bin edges
-    xc: ArrayLike
-        Bin centers
-    nh_err: ArrayLike
-        Bin errors
-    """
-    # bin contents, bin edges, bin centers
-    nh, xe = np.histogram(data, bins=bins, range=range)
-    xc = 0.5 * (xe[1:] + xe[:-1])
-
-    # if no weights, Poisson errors
-    nh_err = nh**0.5
-
-    # if weights, careful treatment of bin contents and errors via boost-histogram
-    # https://www.zeuthen.desy.de/~wischnew/amanda/discussion/wgterror/working.html
-    if weights is not None:
-        whist = bh.Histogram(bh.axis.Regular(bins, *range), storage=bh.storage.Weight())
-        whist.fill(data, weight=weights)
-        cx = whist.axes[0].centers
-        nh = whist.view().value
-        nh_err = whist.view().variance ** 0.5
-
-    return nh, xe, xc, nh_err
-
-
-def plot_data(
-    data: ArrayLike,
-    ax: plt.Axes,
-    range: Tuple[float, float],
-    bins: int = 50,
-    weights: Optional[ArrayLike] = None,
-    label: Optional[str] = None,
-    norm: bool = False,
-    color: str = "black",
-    **kwargs: Any,
-) -> None:
-    """Plot the data, accounting for weights if provided
-
-    Parameters
-    ----------
-    data: ArrayLike
-        Data to be plotted
-
-    ax: plt.Axes
-        Axes to plot on
-
-    bins: int
-        Number of bins (default: 50)
-
-    range: Tuple[float, float]
-        Range of the data
-
-    weights:Optional[ArrayLike]
-        Weights for the data (default: None)
-
-    label: Optional[str]
-        Legend label for the data (default: None)
-
-    kwargs: Any
-        Keyword arguments to be passed to the errorbar plot
-
-    norm: bool
-        If true, normalise the data to unit area (default: False)
-
-    Returns
-    -------
-    None
-        Plots the data on the axes
-    """
-    nh, xe, cx, err = fill_hist_w(data, bins, range, weights)
-
-    # normalise to unity
-    _normalisation = np.sum(nh)
-    if norm:
-        nh = nh / _normalisation
-        err = err / _normalisation
-
-    ax.errorbar(
-        cx,
-        nh,
-        yerr=err,
-        xerr=(xe[1] - xe[0]) / 2,
-        label=label,
-        fmt=".",
-        markersize=3,
-        color=color,
-        **kwargs,
-    )
-
-
-def hist_err(
-    data: ArrayLike,
-    ax: plt.Axes,
-    range: Tuple[float, float],
-    bins: int = 50,
-    weights: Optional[ArrayLike] = None,
-    label: Optional[str] = None,
-    norm: bool = False,
-    **kwargs,
-) -> None:
-    """Wrapper for mplhep histplot method
-
-    Paramaters
-    ----------
-    nh: ArrayLike
-        Histogram bin contents
-    xe: ArrayLike
-        Histogram bin edges
-    ax: plt.Axes
-        Axes to plot on
-    label: Optional[str]
-        Legend label for the data (default: None)
-    kwargs: Any
-        Keyword arguments to be passed to the errorbar plot
-    yerr:Optional[ArrayLike]
-        Error for the histogram bin contents (default: None)
-    norm: bool
-        If true, normalise the data to unit area (default: False)
-
-    Returns
-    -------
-    None
-        Plots the histogram on the axes with errorbars, if not None
-    """
-    nh, xe, xc, err = fill_hist_w(data, bins, range, weights)
-
-    # normalise to unity
-    _normalisation = np.sum(nh)
-    if norm is True:
-        nh = nh / _normalisation
-        err = err / _normalisation
-
-    hep.histplot(nh, xe, yerr=err, ax=ax, label=label, **kwargs)
-
-
-def hist_step_fill(
-    data: ArrayLike,
-    range: tuple,
-    ax: plt.Axes,
-    bins: int = 50,
-    weights: Optional[ArrayLike] = None,
-    label: Optional[str] = None,
-    norm: bool = False,
-    **kwargs,
-) -> None:
-    """Histogram with shaded area
-
-    Paramaters
-    ----------
-    x: ArrayLike
-        Bin centers
-    y: ArrayLike
-        Bin population
-    ax: plt.Axes
-        Axes to plot on
-    label: Optional[str]
-        Legend label for the data (default: None)
-    kwargs: Any
-        Keyword arguments to be passed to the errorbar plot
-    yerr:Optional[ArrayLike]
-        Error for the histogram bin contents (default: None)
-    norm: bool
-        If true, normalise the data to unit area (default: False)
-
-    Returns
-    -------
-    None
-        Plots the histogram on the axes with errorbars, if not None
-    """
-    nh, xe, xc, err = fill_hist_w(data, bins, range, weights)
-
-    # normalise to unity
-    _normalisation = np.sum(nh)
-    if norm is True:
-        nh = nh / _normalisation
-        err = err / _normalisation
-
-    hep.histplot(nh, xe, ax=ax, **kwargs)
-    lo_y = nh - err
-    ax.bar(
-        xc,
-        bottom=lo_y,
-        height=err * 2,
-        alpha=0.33,
-        width=xe[1] - xe[0],
-        label=label,
-        **kwargs,
-    )
-
-
-def eff_plot(
-    x: ArrayLike,
-    eff: Any,
-    eff_err: Any,
-    xerr: Any,
-    label: Optional[str],
-    ax: plt.Axes,
-    fmt: str = ".",
-    markersize: int = 5,
-    draw_band: bool = True,
-    **kwargs,
-) -> None:
-    """Efficiency plot with shaded error bands
-
-    Parameters
-    ----------
-    x: ArrayLike
-        Bin centers
-    eff: Any
-        Efficiency values
-    eff_err: Any
-        Efficiency errors
-    label: Optional[str]
-        Legend label for the data (default: None)
-    ax: plt.Axes
-        Axes to plot on
-    fmt: str
-        Format of the plot (default: '.')
-    markersize: int
-        Size of the markers (default: 5)
-    draw_band: bool
-        If true, draw shaded error band (default: True)
-
-    Returns
-    -------
-    None
-        Plots the efficiency on the axes, with error band if draw_band is True
-    """
-    # quote in percentage
-    eff = eff * 100.0
-    eff_err = eff_err * 100.0
-
-    if draw_band is True:
-        _xerr = 0
-        ax.fill_between(
-            x, eff - eff_err, eff + eff_err, alpha=0.25, linewidth=0, **kwargs
-        )
-    else:
-        _xerr = xerr
-
-    ax.errorbar(
-        x=x,
-        y=eff,
-        yerr=eff_err,
-        xerr=_xerr,
-        label=label,
-        fmt=fmt,
-        markersize=markersize,
-    )

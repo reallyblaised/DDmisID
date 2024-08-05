@@ -70,8 +70,8 @@ class BinningGenerator:
         """
         bins, species = self.gather_info(**kwargs)
 
-        binning2json = {}
         for spc in species.values():
+            binning2json = {}
             binning2json[spc] = {}
             for var, edges in bins.items():
                 if year in ["2016", "2017", "2018"]:
@@ -92,10 +92,7 @@ class BinningGenerator:
                         var = var.replace("_Brunel", "")
                 binning2json[spc][var] = edges
 
-        Path(outdir).mkdir(parents=True, exist_ok=True)
-        outfile_path = f"{outdir}/binning_{year}.json"
-        with open(f"{outfile_path}", "w") as f:
-            json.dump(binning2json, f)
-
-        if print_outpath:
-            return outfile_path
+            outfile_path = Path(f"{outdir}/binning_{year}/{spc}.json")
+            outfile_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(f"{outfile_path}", "w") as f:
+                json.dump(binning2json, f)
