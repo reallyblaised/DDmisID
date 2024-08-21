@@ -47,7 +47,7 @@ def build_template_spec(
         "data": template_data,
         "modifiers": [
             {
-                "name": f"{template_name}",
+                "name": f"{template_name}_yield",
                 "type": "normfactor",
                 "data": None,
             }
@@ -97,6 +97,7 @@ def build_channel_spec(
     ghost_template: Optional[list] = None,
 )->object:
     """Build the schema for the channel"""
+    observations = list(load_hist(obs).view()[:-1]) # FIXME: neglect ghost partition temporarily
     schema = {
         "channels": [
             {
@@ -111,20 +112,48 @@ def build_channel_spec(
             }
         ],
         "observations":[
-            {"name": "Hadron-enriched data", "data": list(load_hist(obs).view()[:-1])} # FIXME: neglect ghost temporarily
+            {"name": "Hadron-enriched data", "data": observations} 
         ],
         "measurements": [
             {
             "name": "True !mu abundance extraction",
-            "config": {"poi": 'pion', "parameters": []}
+            "config": {
+                "poi": 'pion_yield', "parameters": [
+                    # bounds on floating normalisations
+                    {
+                        "name": "proton_yield",
+                        "bounds": [[0.0, np.sum(observations)]],
+                        "inits": [np.sum(observations)/10.0] # initialise at 10% of the data   
+                    },
+                    {
+                        "name": "kaon_yield",
+                        "bounds": [[0.0, np.sum(observations)]],
+                        "inits": [np.sum(observations)/10.0] # initialise at 10% of the data   
+                    },
+                    {
+                        "name": "pion_yield",
+                        "bounds": [[0.0, np.sum(observations)]],
+                        "inits": [np.sum(observations)/10.0] # initialise at 10% of the data   
+                    },
+                    {
+                        "name": "electron_yield",
+                        "bounds": [[0.0, np.sum(observations)]],
+                        "inits": [np.sum(observations)/10.0] # initialise at 10% of the data   
+                    },
+                    # { # FIXME: ghosts excluded
+                    #     "name": "ghost_yield",
+                    #     "bounds": [[0.0, np.sum(observations)]],
+                    #     "inits": [np.sum(observations)/10.0] # initialise at 10% of the data   
+                    # },
+                ]}
             }
         ],
         "version": "1.0.0"
     }
+
     # build and validate according to pyhf specification
     ws = pyhf.workspace.Workspace(schema, validate=True)
     return ws 
-
 
 
 if __name__ == "__main__":
@@ -159,7 +188,7 @@ if __name__ == "__main__":
         electron_template = opts.electron,
         ghost_template = opts.ghost,
     ) 
-    
+
     # having built the workspace in pyhf, use cabinetry to fit and viz
     model, data = cabinetry.model_utils.model_and_data(workspace)
     fit_results = cabinetry.fit.fit(model, data, custom_fit=True) # use iminuit directly

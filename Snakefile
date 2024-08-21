@@ -61,7 +61,6 @@ checkpoint gen_sh_files:
         shell(command)
 
 
-
 rule run_pidcalib:
     """
     Run the PIDCalib2 jobs as spawned in the previous step; store the efficiency histograms in /bin/
@@ -110,7 +109,7 @@ checkpoint discretize_data:
     These have all kinematic & occupancy cuts applied, as well has the PID cuts for the hadron-enriched bins specified in the config file
     """
     input:
-        data_path = config["data_path"] 
+        data_path = config["data"]["path"] 
     output:
         directory("obs/"),
     shell:
@@ -151,7 +150,7 @@ checkpoint make_templates:
         pidcalib_done = "pid_efficiency_maps.done" # required to build the templates
     params:
         executable = "ddmisid/make_templates.py",
-        path_prefix = r"bin/2018/down/antimu_id", # TODO: retrieve from config, and deal with magpol
+        path_prefix = r"bin/2018/up/antimu_id", # TODO: retrieve from config, and deal with magpol
     output: 
         directory("templates/"),
     shell:
@@ -266,7 +265,7 @@ rule extract_misid_weights:
         # FIXME: ghosts missing 
         global_antimuon_eff = fetch_pid_eff_sp_id("antimu_id", "proton", "all"),
         # hadron-enriched data, to which we want to assign weights
-        hadron_enriched_data_path = config["data_path"]
+        hadron_enriched_data_path = config["data"]["path"]
     output:
         # true abundance of each species, accounting for cross-contamination between reco bins
         temp("ddmisid.done")

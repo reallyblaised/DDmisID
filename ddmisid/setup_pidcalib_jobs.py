@@ -117,10 +117,10 @@ def generate_jobs(
                     # based on the desidered category, the pid, occupancy & kinematic selection criteria are different
                     if region_id == "antimu_id":
                         PID_SEL = f"{getattr(MCTunings(), f'_{y}')}{pid_config['reco_cuts'][reco_sp]} & {pid_config[region_id]['pid_cut']}"
-                        RECO_SEL = f"{pid_config[region_id]['cut']} & {pid_config['common_sel']}"  # HACK: absorb the `--cut` directive here
+                        RECO_SEL = f"{pid_config['common_sel']}"  # HACK: absorb the `--cut` directive here
                     if region_id == "mu_id":
                         PID_SEL = f"{getattr(MCTunings(), f'_{y}')}{pid_config['mu_id']['pid_cut']}"
-                        RECO_SEL = f"{pid_config['mu_id']['cut']} & {pid_config['common_sel']}"  # HACK: absorb the `--cut` directive here
+                        RECO_SEL = f"{pid_config['common_sel']}"  # HACK: absorb the `--cut` directive here
 
                     # HACK: there is an exception for e 2016
                     if true_sp_id == "e_B_Jpsi" and y == "2016":
@@ -133,7 +133,7 @@ def generate_jobs(
                         print(tc("Pidcalib jobs config summary:").underline.yellow)
                         print(
                             f"""\n* year: {y}\n* polarity: {magpol}\n* calib species: {true_sp_alias}\n* calibration sample: {CALIBRATION_SAMPLE }\
-                            \n* binning variables: {BINNING_VARS}\n* reco selection: {RECO_SEL}\n
+                            \n* binning variables: {BINNING_VARS}\n* reco selection: {RECO_SEL}\n* pid selection: {PID_SEL}\n
                         
                         """
                         )
@@ -165,7 +165,7 @@ def generate_jobs(
 
                     # if booked test, run over one calibration file only
                     if test:
-                        job_conf += " --max-files 1"
+                        job_conf += " --max-files 25"  # ensure sufficient statistics
 
                     # verbose pidcalib output
                     if verbose:
@@ -266,9 +266,7 @@ def generate_he_jobs(
                 # based on the desidered category, the pid, occupancy & kinematic selection criteria are different
                 if region_id == "antimu_id":
                     PID_SEL = f"{getattr(MCTunings(), f'_{y}')}{pid_config['he_all']} & {pid_config[region_id]['pid_cut']}"
-                    RECO_SEL = (
-                        f"{pid_config[region_id]['cut']} &  {pid_config['common_sel']}"
-                    )
+                    RECO_SEL = f"{pid_config['common_sel']}"
 
                 # HACK: there is an exception for e 2016
                 if true_sp_id == "e_B_Jpsi" and y == "2016":
@@ -281,7 +279,7 @@ def generate_he_jobs(
                     print(tc("Pidcalib jobs config summary:").underline.yellow)
                     print(
                         f"""\n* year: {y}\n* polarity: {magpol}\n* calib species: {true_sp_alias}\n* calibration sample: {CALIBRATION_SAMPLE }\
-                        \n* binning variables: {BINNING_VARS}\n* reco selection: {RECO_SEL}\n
+                        \n* binning variables: {BINNING_VARS}\n* reco selection: {RECO_SEL}\n* pid selection: {PID_SEL}\n
                     
                     """
                     )
@@ -309,7 +307,7 @@ def generate_he_jobs(
 
                 # if booked test, run over one calibration file only
                 if test:
-                    job_conf += " --max-files 1"
+                    job_conf += " --max-files 25"  # ensure sufficient statistics
 
                 # verbose pidcalib output
                 if verbose:
@@ -377,7 +375,7 @@ def pidcalib_jobs_selector(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PIDCalib jobs generator")
     parser.add_argument(
-        "-t", "--test", action="store_true", help="Run pidcalib2 with --max-files==1"
+        "-t", "--test", action="store_true", help="Run pidcalib2 with --max-files==25"
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Run pidcalib2 with --verbose"

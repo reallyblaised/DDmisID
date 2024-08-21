@@ -22,6 +22,22 @@ import matplotlib.pyplot as plt
 plt.style.use(["science", "no-latex"])
 
 
+def binning_key_matcher(data_key: str, year: str) -> str:
+    """Match data binning key to the PIDCalib binning scheme"""
+    assert year in ("2011", "2012", "2015", "2016", "2017", "2018"), "ERROR: unrecognised `year` identifier"
+
+    if year in ("2011", "2012"):
+        return data_key # no Brunel prefix for Run 1
+    else:
+        match data_key: 
+            case "P": 
+                return "Brunel_P"
+            case "ETA":
+                return "Brunel_ETA"
+            case "nTracks":
+                return "nTracks_Brunel"
+    
+
 class Discretizer:
     """
     Base class for discretizing data into user-specified binnings.
@@ -150,15 +166,18 @@ if __name__ == "__main__":
 
     # get binning, data cuts, selection cuts from config file
     pid_config = read_config("config/main.yml", key="pid")
-    binning_no_prefix, data_cuts = (
-        pid_config["binning"],
-        pid_config["data_cuts"],
-    )  # binning (no prefix); full set of cuts for hadron-enriched partiions (comprises common sel between HE and signal)
+    binning_no_prefix = pid_config["binning"]
+
+    # data-specific info
+    obs_config = read_config("config/main.yml", key="data")
+    data_cuts = obs_config[
+        "data_cuts"
+    ]  # binning (no prefix); full set of cuts for hadron-enriched partiions (comprises common sel between HE and signal)
     root_key, root_tree_name = (
-        pid_config["root_config"]["root_key"],
-        pid_config["root_config"]["root_tree_name"],
+        obs_config["root_config"]["root_key"],
+        obs_config["root_config"]["root_tree_name"],
     )
-    data_prefixes = pid_config[
+    data_prefixes = obs_config[
         "data_prefixes"
     ]  # prepended to each binning variable -> get data-compatible binning selections
 
@@ -166,9 +185,9 @@ if __name__ == "__main__":
     binning = {}
     for key, prefix in data_prefixes.items():
         if prefix:
-            binning[f"{prefix}_{key}"] = binning_no_prefix[key]
+            binning[f"{prefix}_{key}"] = binning_no_prefix[binning_key_matcher(key, *pid_config["years"])]
         else:
-            binning[f"{key}"] = binning_no_prefix[key]
+            binning[f"{key}"] = binning_no_prefix[binning_key_matcher(key, *pid_config["years"])]
 
     # load data into awkward array for increased speeds - read in only BOI, as will fill obs hist only
     hadron_enriched_dataset = load_ntuple(

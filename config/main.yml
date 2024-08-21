@@ -20,9 +20,9 @@ pid:
   
   # alias : list[float, ...]
   binning:
-    "Brunel_P"       : [10_000, 100_000] #[10_000, 15_000, 20_000, 25_000, 30_000, 35_000, 40_000, 100_000]
-    "Brunel_ETA"     : [1.5, 3.0, 5.0]
-    "nTracks_Brunel" : [0, 250, 1000] # checked that this is not used in any trigger/stripping cuts
+    "Brunel_P"       : [10_000, 100_000] # [10_000, 15_000, 20_000, 25_000, 30_000, 35_000, 40_000, 100_000]
+    "Brunel_ETA"     : [1.5, 5.0] # [1.5, 3.0, 5.0]  
+    "nTracks_Brunel" : [0, 1000] # [0, 500, 1000] # checked that this is not used in any trigger/stripping cuts
   
   # what species are considered in the makeup of the misID?
   # NOTE: take care to specify the species alias employed in pidcalib2
@@ -40,18 +40,16 @@ pid:
   # -------------------------------------------------------------------------------------
   # !muon ID for hadron-enriched data 
   antimu_id: 
-    pid_cut: "DLLmu<0" # arg to `--pid_cut` option in pidcalib2 
-    cut: "IsMuon==0" # arg to `--cut` option in pidcalib2  
+    pid_cut: "DLLmu<0 & IsMuon==0.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2
 
   # muon ID to select the signal-fit region  
   mu_id: 
-    pid_cut: "_ProbNNghost<0.1 & DLLmu>3 & DLLK<0.0 & DLLp<0.0" # arg to `--pid_cut` option in pidcalib2 
-    cut: "IsMuon==1.0" # arg to `--cut` option in pidcalib2  
+    pid_cut: "_ProbNNghost<0.1 & DLLmu>3 & DLLK<0.0 & DLLp<0.0 & IsMuon==1.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2 
 
   # selection shared between the hadron-enriched and signal samples. 
   # usually involving acceptance cuts, and the extrema of the mommentum range established in nominal events selection
   # for run 2 stripping vs turbo analyses, the `Brunel_` prefix might be required - see: https://twiki.cern.ch/twiki/bin/view/LHCb/PIDCalibPackage
-  common_sel: "InMuonAcc==1.0 & probe_Brunel_NShared==0 & Brunel_P>10000 & Brunel_P<100000 & Brunel_PT>1500" # NOTE: ensure the extrema are compatible with the binning json files
+  common_sel: "probe_Brunel_NShared==0 & Brunel_P>10000 & Brunel_P<100000 & Brunel_PT>1500" # NOTE: ensure the extrema are compatible with the binning json files
 
   # pidcalib cuts of HE sample to define the reco partitions
   reco_cuts:
@@ -67,21 +65,22 @@ pid:
 # =============================================================================================================================
 # DATA section: cuts applied to the hadron enriched *data*: the syntax must reflect the branch names in the user-defined ntuple
 # =============================================================================================================================
-data_path: "/data/submit/blaised/bc2dmunu/fakemuon/DATA/HLT2_triggered/D0MuNu/2018/MU/99_2021_01_443970_443970746_Bc2D0MuNuX.root" # path to hadron-enriched data file
+data: 
+  path: "/work/submit/blaised/DDmisID/fakemuon_2018_MU.root" # path to hadron-enriched data file (pid + intermediate selection applied)
 
-# prefix for muon branches in the data tuples
-data_prefixes: # NOTE: keys must match binning variable names
-  P: "Mu_plus" # to signal that branches follow the naming convention Mu_plus_{P, PT, ETA...}
-  ETA: "Mu_plus_LK"
-  nTracks: ""
+  # prefix for muon branches in the data tuples
+  data_prefixes: # NOTE: keys must match binning variable names
+    P: "Mu_plus" # to signal that branches follow the naming convention Mu_plus_{P, PT, ETA...}
+    ETA: "Mu_plus_LK"
+    nTracks: ""
 
-root_config: # dependent on root file(s) of data being considered 
-  root_key: "B2DMuNuX_D02KPi_FakeMuonTuple"
-  root_tree_name: "DecayTree"
+  root_config: # dependent on root file(s) of data being considered 
+    root_key: "B2DMuNuX_D02KPi_FakeMuonTuple"
+    root_tree_name: "DecayTree"
 
-# NOTE: follow awkward syntax: each selection cut enclosed by a set of brackets
-data_cuts: 
-  kaon      : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0) & (Mu_plus_isMuon==0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDK>0.0) & ( (Mu_plus_PIDK-Mu_plus_PIDp)>0.0 ) & ( (Mu_plus_PIDK-Mu_plus_PIDe)>0.0 )"
-  pion      : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0) & (Mu_plus_isMuon==0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDK<0.0) & (Mu_plus_PIDp<0.0) & (Mu_plus_PIDe<0.0)"
-  proton    : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0) & (Mu_plus_isMuon==0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDp>0.0) & ( (Mu_plus_PIDp-Mu_plus_PIDK)>0.0 ) & ( (Mu_plus_PIDp-Mu_plus_PIDe)>0.0 )"
-  electron  : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0) & (Mu_plus_isMuon==0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDe>0.0) & ( (Mu_plus_PIDe-Mu_plus_PIDK)>0.0 ) & ( (Mu_plus_PIDe-Mu_plus_PIDp)>0.0 )"
+  # NOTE: follow awkward syntax: each selection cut enclosed by a set of brackets
+  data_cuts: 
+    kaon      : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDK>0.0) & ( (Mu_plus_PIDK-Mu_plus_PIDp)>0.0 ) & ( (Mu_plus_PIDK-Mu_plus_PIDe)>0.0 )"
+    pion      : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDK<0.0) & (Mu_plus_PIDp<0.0) & (Mu_plus_PIDe<0.0)"
+    proton    : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDp>0.0) & ( (Mu_plus_PIDp-Mu_plus_PIDK)>0.0 ) & ( (Mu_plus_PIDp-Mu_plus_PIDe)>0.0 )"
+    electron  : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDe>0.0) & ( (Mu_plus_PIDe-Mu_plus_PIDK)>0.0 ) & ( (Mu_plus_PIDe-Mu_plus_PIDp)>0.0 )"
