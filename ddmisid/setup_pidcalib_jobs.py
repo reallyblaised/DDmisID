@@ -18,6 +18,8 @@ from typing_extensions import ParamSpec
 T = TypeVar("T")
 P = ParamSpec("P")
 
+MAX_CALIB_FILES = read_config("config/main.yml", key="max_calib_files")
+
 
 def check_mu_region(
     func: Callable[P, T], valid_ids: "list[str]" = ["antimu_id", "mu_id"]
@@ -165,7 +167,7 @@ def generate_jobs(
 
                     # if booked test, run over one calibration file only
                     if test:
-                        job_conf += " --max-files 25"  # ensure sufficient statistics
+                        job_conf += f" --max-files {MAX_CALIB_FILES}"  # ensure sufficient statistics
 
                     # verbose pidcalib output
                     if verbose:
@@ -307,7 +309,7 @@ def generate_he_jobs(
 
                 # if booked test, run over one calibration file only
                 if test:
-                    job_conf += " --max-files 25"  # ensure sufficient statistics
+                    job_conf += f" --max-files {MAX_CALIB_FILES}"  # ensure sufficient statistics
 
                 # verbose pidcalib output
                 if verbose:
@@ -375,7 +377,10 @@ def pidcalib_jobs_selector(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PIDCalib jobs generator")
     parser.add_argument(
-        "-t", "--test", action="store_true", help="Run pidcalib2 with --max-files==25"
+        "-t",
+        "--test",
+        action="store_true",
+        help=f"Run pidcalib2 with --max-files=={MAX_CALIB_FILES}",
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Run pidcalib2 with --verbose"

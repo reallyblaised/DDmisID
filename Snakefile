@@ -215,7 +215,7 @@ rule build_relative_abundance_lookup_table:
     params: 
         executable = "ddmisid/collect_yields.py"
     output:
-        temp("postfit/rel_abundances_hist.pkl"), # global histogram; a lookup table in {species, kinematics, occupancy} -> N_i/N_ref
+        "postfit/rel_abundances_hist.pkl", # global histogram; a lookup table in {species, kinematics, occupancy} -> N_i/N_ref
     run:
         shell("python {params.executable} --input {input} --output {output}")
 
@@ -266,6 +266,8 @@ rule extract_misid_weights:
         global_antimuon_eff = fetch_pid_eff_sp_id("antimu_id", "proton", "all"),
         # hadron-enriched data, to which we want to assign weights
         hadron_enriched_data_path = config["data"]["path"]
+    params:
+        executable = "ddmisid/assign_w_misid.py"
     output:
         # true abundance of each species, accounting for cross-contamination between reco bins
         temp("ddmisid.done")
@@ -273,35 +275,3 @@ rule extract_misid_weights:
         shell("touch {output}")
 
 
-
-
-
-
-
-# checkpoint consistency_check:
-#     input:
-#         pidcalib_done = "pidcalib_full_run.done",
-#         templates_done = "templates.done",
-#     params:
-#         script = "ddmisid/consistency_checker.py",
-#         eff_hist_path_prefix = r"bin/2018/down/antimu_id",
-#         template_path_prefix = r"templates",
-#     output:
-#         directory("checks/"),
-#     shell:
-#         "python {params.script} {params.eff_hist_path_prefix} {params.template_path_prefix}"
-
-
-# def aggregate_checks(wildcards):
-#     checkpoint_output = checkpoints.consistency_check.get(**wildcards).output[0]
-#     species = glob_wildcards(os.path.join(checkpoint_output, '{species}.{ext}'))
-#     return expand(checkpoint_output+"/{species}.{ext}", zip, species=species, ext=ext)
-
-
-# rule collect_checks:
-#     input:
-#         aggregate_checks,
-#     output:
-#         combined = "consistency_checks.done",
-#     shell:
-#         "echo {input} > {output.combined}"
