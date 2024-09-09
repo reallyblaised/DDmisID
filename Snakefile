@@ -48,6 +48,9 @@ checkpoint gen_sh_files:
         verbose = config['verbose']
     output:
         dir = directory("bin/"),
+    params: 
+        user_id = config['user_id']
+    priority: 100
     run:
         command = "python {input.config_executable} --pid_regime reco --pid_regime he_all" 
         
@@ -58,6 +61,7 @@ checkpoint gen_sh_files:
         if params.test: 
             print(">>> WARNING: running PIDCalib2 in `test` mode")
             command+=" --test"
+
         shell(command)
 
 
@@ -72,7 +76,7 @@ rule run_pidcalib:
     log: 
         "log/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/pidcalib.log"
     run:
-        shell("bash {input.bash_file} &> {log}")
+        shell("bash {input.bash_file}") #" &> {log}")
 
 
 def aggregate_pidcalib(wildcards):
@@ -112,8 +116,10 @@ checkpoint discretize_data:
         data_path = config["data"]["path"] 
     output:
         directory("obs/"),
+    log: 
+       "log/data_discretizer.log" 
     shell:
-        "python ddmisid/data_discretizer.py {input.data_path}"
+        "python ddmisid/data_discretizer.py {input.data_path} &> {log}"
 
 
 def aggregate_discretizer(wildcards):
@@ -147,7 +153,8 @@ rule collect_discretizer:
 # ================================================================================================
 checkpoint make_templates:
     input:
-        pidcalib_done = "pid_efficiency_maps.done" # required to build the templates
+        pidcalib_done = "pid_efficiency_maps.done", # NOTE: required to build the templates
+        data_partitions_done = "data_partitions.done" # avoid checkpoint conflict with data discretisation
     params:
         executable = "ddmisid/make_templates.py",
         path_prefix = r"bin/2018/up/antimu_id", # TODO: retrieve from config, and deal with magpol
@@ -159,8 +166,6 @@ checkpoint make_templates:
 
 rule bml_fit: 
     input:
-        # dummy -> correct workflow
-        data_partitions = "data_partitions.done", # signal spawning of hadron-enriched data partitions
         # templates
         pion_template = lambda wildcards: [
             "templates/{p}/{eta}/{ntracks}/{species}.pkl".\
@@ -185,6 +190,8 @@ rule bml_fit:
         ],
     params:
         executable = "ddmisid/fit_reco.py"
+    log: 
+        "log/{p}/{eta}/{ntracks}/bml_fit.log"
     output:
         # true abundance of each species, accounting for cross-contamination between reco bins
         "postfit/{p}/{eta}/{ntracks}/yields.pkl",
@@ -194,7 +201,7 @@ rule bml_fit:
             --kaon {input.kaon_template}\
             --proton {input.proton_template}\
             --electron {input.electron_template}\
-            --obs {input.obs}" # FIXME: ghosts missing 
+            --obs {input.obs}" #&> {log}" # FIXME: ghosts missing 
         )
 
 
