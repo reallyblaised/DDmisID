@@ -118,8 +118,8 @@ def generate_jobs(
 
                     # based on the desidered category, the pid, occupancy & kinematic selection criteria are different
                     if region_id == "antimu_id":
-                        PID_SEL = f"{getattr(MCTunings(), f'_{y}')}{pid_config['reco_cuts'][reco_sp]} & {pid_config[region_id]['pid_cut']}"
-                        RECO_SEL = f"{pid_config['common_sel']}"  # HACK: absorb the `--cut` directive here
+                        PID_SEL = f"{pid_config['reco_cuts'][reco_sp]}"
+                        RECO_SEL = f"{getattr(MCTunings(), f'_{y}')}{pid_config[region_id]['pid_cut']} & {pid_config['common_sel']}"  # HACK: absorb the `--cut` directive here
                     if region_id == "mu_id":
                         PID_SEL = f"{getattr(MCTunings(), f'_{y}')}{pid_config['mu_id']['pid_cut']}"
                         RECO_SEL = f"{pid_config['common_sel']}"  # HACK: absorb the `--cut` directive here
@@ -267,7 +267,7 @@ def generate_he_jobs(
 
                 # based on the desidered category, the pid, occupancy & kinematic selection criteria are different
                 if region_id == "antimu_id":
-                    PID_SEL = f"{getattr(MCTunings(), f'_{y}')}{pid_config['he_all']} & {pid_config[region_id]['pid_cut']}"
+                    PID_SEL = f"{getattr(MCTunings(), f'_{y}')}{pid_config[region_id]['pid_cut']}"
                     RECO_SEL = f"{pid_config['common_sel']}"
 
                 # HACK: there is an exception for e 2016
