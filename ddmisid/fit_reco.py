@@ -211,11 +211,11 @@ if __name__ == "__main__":
     # viz results 
     # -----------
     colors = {
-        "proton": "#2166ac",
-        "pion": "#92c5de",
-        "kaon": "#b2182b",
-        "electron": "#f4a582",
-        "ghost": "#878787",
+        "proton": "#225ea8",
+        "pion": "#1d91c0",
+        "kaon": "#7fcdbb",
+        "electron": "#edf8b1",
+        "ghost": "#969696",
     }
     figures = cabinetry.visualize.data_mc(model_pred_postfit, data, colors=colors, save_figure=False)
     fig = figures[0]["figure"]
