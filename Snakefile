@@ -263,22 +263,35 @@ rule extract_misid_weights:
     """
     input:
         # $N_i/N_{\mathrm{ref}}$ for each species 
+        # ---------------------------------------
         relative_true_abundances = "postfit/rel_abundances_hist.pkl",
-        # # eff(h->mu) for each species
+        # eff(h->mu) for each species
+        # -----------------------------
         pion_to_mu_eff = fetch_pid_eff_sp_id("mu_id", "pion"),
         electron_to_mu_eff = fetch_pid_eff_sp_id("mu_id", "electron"),
         kaon_to_mu_eff = fetch_pid_eff_sp_id("mu_id", "kaon"),
         proton_to_mu_eff = fetch_pid_eff_sp_id("mu_id", "proton"),
-        # FIXME: ghosts missing 
-        global_antimuon_eff = fetch_pid_eff_sp_id("antimu_id", "proton", "all"),
+        # FIXME: ghosts
+        # species-specific PID efficiencies for h \in hadron-enriched-dataset [no partitions required]
+        # --------------------------------------------------------------------------------------------
+        proton_to_antimu_eff = fetch_pid_eff_sp_id("antimu_id", "proton", "all"), # all signifies in {!isMuon & DLLmu<0}
+        kaon_to_antimu_eff = fetch_pid_eff_sp_id("antimu_id", "kaon", "all"),
+        pion_to_antimu_eff = fetch_pid_eff_sp_id("antimu_id", "pion", "all"),
+        electron_to_antimu_eff = fetch_pid_eff_sp_id("antimu_id", "electron", "all"),
+        # FIXME: global_antimuon_eff_ghosts = fetch_pid_eff_sp_id("antimu_id", "proton", "all"),
         # hadron-enriched data, to which we want to assign weights
-        hadron_enriched_data_path = config["data"]["path"]
+        # --------------------------------------------------------
+        hadron_enriched_data = config["data"]["path"]
     params:
         executable = "ddmisid/assign_w_misid.py"
     output:
         # true abundance of each species, accounting for cross-contamination between reco bins
         temp("ddmisid.done")
     run:
-        shell("touch {output}")
+        shell("python {params.executable} --rel_abundances {input.relative_true_abundances} --obs {input.hadron_enriched_data}\
+        --p_to_mu {input.proton_to_mu_eff} --pi_to_mu {input.pion_to_mu_eff} --k_to_mu {input.kaon_to_mu_eff} --e_to_mu {input.electron_to_mu_eff}\
+        --p_to_antimu {input.proton_to_antimu_eff} --pi_to_antimu {input.pion_to_antimu_eff} --k_to_antimu {input.kaon_to_antimu_eff} --e_to_antimu {input.electron_to_antimu_eff}\
+        ") 
+        shell("touch {output}") # dummy 
 
 
