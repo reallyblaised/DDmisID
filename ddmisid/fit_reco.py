@@ -3,29 +3,32 @@ import pickle
 import argparse
 from typing import Optional, Callable, Any
 import pyhf.workspace
-from ddmisid import load_hist, data_pull_plot, make_binning
+from ddmisid import load_hist, data_pull_plot, make_binning, make_legend
 from pathlib import Path
 import numpy as np
 import cabinetry
 from pathlib import Path
 import matplotlib.pyplot as plt
-from uncertainties import ufloat
+from uncertainties import ufloat, ufloat_fromstr
 import json
+import matplotlib.patches as patches
 
 plt.style.use(["science", "no-latex"])
 cabinetry.set_logging()
 
 
-def assign_reco_labels(categories: list) -> list:
+def assign_reco_labels(categories: list, include_ghosts: bool = False) -> list:
     """Assign reco labels to the categories"""
     labels = []
     for i in categories:
         match i:
-            case "kaon": labels.append(r"kaon")
-            case "pion": labels.append(r"pion")
-            case "proton": labels.append(r"proton")
-            case "electron": labels.append(r"electron")
-            case "ghost": labels.append(r"ghost")
+            case "kaon": labels.append(r"$K$")
+            case "pion": labels.append(r"$\pi$")
+            case "proton": labels.append(r"$p$")
+            case "electron": labels.append(r"$e$")
+            case "ghost": 
+                if include_ghosts:
+                    labels.append(r"Ghosts")
     
     return labels
 
@@ -226,35 +229,126 @@ if __name__ == "__main__":
     hist_plot.set_ylabel(r"Candidates [Arbitrary Units]") 
 
 
+
     # NOTE: custom viz of results
-    # obs = load_hist(opts.obs)
-    #_ = cabinetry.tabulate.yields(model_pred_postfit, data)
-    # fig, ax, axp = data_pull_plot(
-    #     axp_xlabel=r"Hadron-enriched $reco$ categories",
-    #     annotation=None,
-    # )
-    # breakpoint()
-    # # plot the data
-    # ax.errorbar(
-    #     assign_reco_labels([obs.axes['reco'][i] for i in range(obs.axes['reco'].size)]),
-    #     obs.view(),
-    #     yerr = np.sqrt(obs.view()), 
-    #     color="black",
-    #     fmt=".",
-    #     markersize=3,
-    #     label="Data",
-    # )
+    postfit_info = cabinetry.tabulate.yields(model_pred_postfit, data) 
+    obs = np.array(
+        list(postfit_info['yields_per_bin'][-1].values())[1:], 
+        dtype=float
+    ) # unweighted
 
-    # breakpoint()
-    # # plot the model
-    # ax.plot(
-    #     assign_reco_labels([obs.axes['reco'][i] for i in range(obs.axes['reco'].size)]),
-    #     model_pred_postfit[0],
-    #     color="red",
-    #     label="Model",
-    # )
+    # sanity checks - inspect the compatibility (assume ghosts are the last entry)
+    _obs = load_hist(opts.obs)
+    assert _obs.view()[:4].all() == obs.all()
 
-    # go onto saving all the info 
-    # figure
+    # book canvas
+    fig_pull, ax, axp = data_pull_plot(
+        axp_xlabel=r"Hadron-enriched $reco$ categories",
+        annotation=None,
+        ylabel="Candidates [A.U.]",
+        is_pull=False, # data/model
+        axp_ylabel = r"$\frac{\mathrm{Data}}{\mathrm{Model}}$",
+    )
+    # plot the data
+    ax.errorbar(
+        assign_reco_labels([_obs.axes['reco'][i] for i in range(_obs.axes['reco'].size)]),
+        obs,
+        yerr = np.sqrt(obs.view()), # unweighted observations
+        color="black",
+        fmt=".",
+        markersize=3,
+        label="Data",
+    )
 
-    [fig.savefig(f"{_outpath}/projection.{ext}") for ext in ("pdf", "png", "eps")]
+    include_ghosts = False
+    bottom = np.zeros(len(obs))
+    for s_idx in range(len(postfit_info['yields_per_bin'])):
+        category = postfit_info['yields_per_bin'][s_idx]['sample']
+        match category: 
+            case 'proton': cosmetics = {'color' : colors['proton'], 'edgecolor' : colors['proton'], 'label' : r"$p$"}
+            case 'pion': cosmetics = {'color' : colors['pion'], 'edgecolor' : colors['pion'], 'label' : r"$\pi$"}
+            case 'kaon': cosmetics = {'color' : colors['kaon'], 'edgecolor' : colors['kaon'], 'label' : r"$K$"}
+            case 'electron': cosmetics = {'color' : colors['electron'], 'edgecolor' : colors['electron'], 'label' : r"$e$"}
+            case 'total': cosmetics = {'edgecolor': '#b10026', 'label' : 'Model', 'facecolor' : None}
+            case _:
+                break
+                #raise KeyError(f"Unexpected sample: {postfit_info['yields_per_bin'][s_idx]['sample']}")
+        
+
+
+        # stacked per-species yields
+        if category not in ('data', 'total'):
+            y = np.array(
+                [ufloat_fromstr(i).n for i in list(postfit_info['yields_per_bin'][s_idx].values())[1:]],
+                dtype=int
+            )   
+            # plot stacked hist
+            ax.bar(
+                height = y,
+                x = assign_reco_labels([_obs.axes['reco'][i] for i in range(_obs.axes['reco'].size)]),
+                width=1.0,
+                bottom=bottom,
+                **cosmetics,
+            )
+            bottom += y       
+        
+        # total fit model
+        if category=='total':
+            y = np.array(
+                [ufloat_fromstr(i) for i in list(postfit_info['yields_per_bin'][s_idx].values())[1:]],
+            )   
+            
+            # fit model uncertainty
+            ax.bar(
+                x = assign_reco_labels([_obs.axes['reco'][i] for i in range(_obs.axes['reco'].size)]),
+                height = [b.s*2 for b in y],
+                bottom = [b.n - b.s for b in y],
+                facecolor='none',
+                hatch='///////',
+                linewidth=0.0000,
+                width=1.0,
+                label="Uncertainty",
+                edgecolor='tab:grey',
+                alpha=0.5
+            )                
+
+            # data/model subplot
+            dom = obs/y
+            uobs = np.array([
+                ufloat(o, o**.5) for o in obs
+            ])
+            udom = uobs/y # data over model, accounting for poison errors
+            axp.axhline(1.0, color="black", lw=0.33, ls=":")
+            axp.errorbar(
+                x = assign_reco_labels([_obs.axes['reco'][i] for i in range(_obs.axes['reco'].size)]),
+                y = [r.n for r in dom],
+                yerr = [r.s for r in dom],
+                color="black",
+                fmt=".",
+                markersize=3,
+            )
+            # hatched error total error budget 
+            axp.bar(
+                x = assign_reco_labels([_obs.axes['reco'][i] for i in range(_obs.axes['reco'].size)]),
+                height = [2*r.s for r in udom], # all uncertainties folded in
+                bottom = [1.0-r.s for r in udom],
+                width=1.0,
+                edgecolor='tab:grey',
+                facecolor='none',
+                alpha=0.5,
+                hatch='///////',
+                lw=0.0,
+            ) 
+            axp.set_ylim(0.5, 1.5)
+            axp.set_yticks([0.75, 1.0, 1.25]) 
+            axp.tick_params(
+                axis="y", labelsize="small"
+            )  # Set y-axis tick label font size to small
+
+    # legend
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    ax.ticklabel_format(style='scientific', axis='y', scilimits=(0,0))  # Force scientific notation
+
+    # save figs
+    # [fig.savefig(f"{_outpath}/postfit_cabinetry.{ext}") for ext in ("pdf", "png", "eps")] # backup
+    [fig_pull.savefig(f"{_outpath}/postfit.{ext}") for ext in ("pdf", "png", "eps")]

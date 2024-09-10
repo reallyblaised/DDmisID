@@ -44,6 +44,7 @@ def data_pull_plot(
     axp_xlabel: str | None = None,
     axp_ylabel: str = r"Pulls $[\sigma]$",
     annotation: str | None = None,
+    is_pull: bool = True,
 ) -> tuple[Any, plt.Axes, plt.Axes]:
     """
     Generate 2-ax fig with upper ax for data, lower ax for pulls
@@ -71,6 +72,9 @@ def data_pull_plot(
     annotataion: str | None
         If not None, annotate the plot with the given string (default: None)
 
+    is_pull: bool 
+        plot fit pulls; if False, data/model (default: True)
+
     Returns
     -------
     tuple[Any, Callable, Callable]
@@ -87,7 +91,7 @@ def data_pull_plot(
     fig.subplots_adjust(hspace=0.05)  # Adjust this value as needed
 
     # main plt config
-    ax.set_title(title, loc="left", color="tab:grey")
+    ax.set_title(title, loc="right", color="tab:grey")
     ax.set_ylabel(ylabel)
 
     # additional annotation
@@ -108,16 +112,18 @@ def data_pull_plot(
     # pull plt config
     ax_p.set_xlabel(axp_xlabel)
     ax_p.set_ylabel(axp_ylabel)
-    ax_p.set_ylim(-5.5, 5.5)
 
-    ax_p.set_yticks([-3, 0, 3])  # Set y-axis ticks at -3, 0, 3
-    ax_p.tick_params(
-        axis="y", labelsize="small"
-    )  # Set y-axis tick label font size to small
+    if is_pull == True:
+        ax_p.set_ylim(-5.5, 5.5)
 
-    ax_p.axhline(0, color="tab:grey", lw=0.5, ls="-")
-    ax_p.axhline(3, color="firebrick", lw=0.5, ls="--")
-    ax_p.axhline(-3, color="firebrick", lw=0.5, ls="--")
+        ax_p.set_yticks([-3, 0, 3])  # Set y-axis ticks at -3, 0, 3
+        ax_p.tick_params(
+            axis="y", labelsize="small"
+        )  # Set y-axis tick label font size to small
+
+        ax_p.axhline(0, color="tab:grey", lw=0.5, ls="-")
+        ax_p.axhline(3, color="firebrick", lw=0.5, ls="--")
+        ax_p.axhline(-3, color="firebrick", lw=0.5, ls="--")
 
     return fig, ax, ax_p
 
