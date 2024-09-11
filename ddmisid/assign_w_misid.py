@@ -19,12 +19,21 @@ import warnings
 import pprint
 
 
+def extract_axis_name(axis: bh.axis) -> str:
+    """Extract the name of histogram axis"""
+    try:
+        return axis.metadata.get("name")
+    except:
+        return axis.name
+
+
 def validate_binning(
-    histogram: bh.Histogram, binning: Dict[str, np.ndarray | list]
+    histogram: bh.Histogram,
+    binning: Dict[str, np.ndarray | list],
 ) -> None:
     """Axis validation against the nominal user-defined binning scheme"""
     for axis in histogram.axes:
-        name = axis.metadata.get("name")
+        name = extract_axis_name(axis)
 
         # verify the axis in the nominal binning scheme
         if name not in binning:
@@ -61,9 +70,7 @@ def process_pid_hists(
             continue  # skip [accounting for ghost exclusion]
 
         if "mu" in key:
-
             pid_hist = load_hist(value)  # Load muon/antimuon PID efficiencies
-
             # Validate the binning before adding it to the container
             validate_n_axes(pid_hist, binning)
             validate_binning(pid_hist, binning)
@@ -76,6 +83,25 @@ def process_pid_hists(
         pprint.pprint(pid_container, width=40, indent=4)
 
     return pid_container
+
+
+def process_rel_n_hist(
+    hist: bh.Histogram,
+    binning: Dict[str, np.ndarray | list],
+    verbose: bool = False,
+) -> Dict[str, bh.Histogram]:
+    """Validate the relative abundances, binwise"""
+    rel_h = load_hist(hist)  # load the relative abundances histogram
+
+    # Validate the binning before adding it to the container, excluding the species axes
+    validate_n_axes(rel_h[..., -1], binning)
+    validate_binning(rel_h[..., -1], binning)
+
+    # verbose print of dict
+    if verbose:
+        pprint.pprint(rel_h, width=40, indent=4)
+
+    return rel_h
 
 
 if __name__ == "__main__":
@@ -122,6 +148,9 @@ if __name__ == "__main__":
 
     # process input in dedicated containers
     pid_effs = process_pid_hists(opts, binning, False)
+
+    # relative abundance prefactors
+    rel_n_sp = process_rel_n_hist(opts.rel_abundances, binning)
 
     breakpoint()
 
