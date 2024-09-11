@@ -17,6 +17,8 @@ import boost_histogram as bh
 from typing import Dict
 import warnings
 import pprint
+from uncertainties import ufloat
+from functools import partial
 
 
 def extract_axis_name(axis: bh.axis) -> str:
@@ -104,6 +106,50 @@ def process_rel_n_hist(
     return rel_h
 
 
+def compute_misid_w(
+    i: int,
+    j: int,
+    k: int,
+    pid_effs: Dict[str, bh.Histogram],
+    relative_yields: bh.Histogram,
+    species: tuple = ("electron", "kaon", "pion", "proton"),
+) -> float:
+    """Exract the misID weight, assuming index order p, eta, ntracks [checks in place]"""
+
+    # sanity
+    assert (
+        abs(relative_yields[i, j, k, ...].sum().value - 1.0) < 1e-5
+    ), f"Normalisation check fail: relative yields in bin ({i}, {j}, {k}) are incompatible with normalisation to unity and the 1e-5 level"
+
+    # FIXME: consistency of binning order and edges among the pid hs
+    # FIXME: make sure i,j,k are correctly mapped on the pid axes
+
+    # consistency check
+    misid_w = 0.0
+    for s in species:
+        # fetch the factors in the species-specific contributions to the total misID weight, incorporating the respective uncertainties
+        ni_nref = ufloat(
+            relative_yields[i, j, k, f"{s}_yield"].value,
+            relative_yields[i, j, k, f"{s}_yield"].variance ** 0.5,
+        )
+        num_pid_eff = ufloat(
+            pid_effs[f"{s}_to_mu"][i, j, k].value,
+            pid_effs[f"{s}_to_mu"][i, j, k].variance ** 0.5,
+        )
+        denom_pid_eff = ufloat(
+            pid_effs[f"{s}_to_antimu"][i, j, k].value,
+            pid_effs[f"{s}_to_antimu"][i, j, k].variance ** 0.5,
+        )
+
+        # species weight factor
+        species_w = ni_nref * (1 / denom_pid_eff) * num_pid_eff
+
+        # linear combination of species factors
+        misid_w += species_w
+
+    return misid_w.n
+
+
 if __name__ == "__main__":
     # get path to data file
     parser = argparse.ArgumentParser(
@@ -111,33 +157,35 @@ if __name__ == "__main__":
     )
     parser.add_argument("--obs", help="hadron-enriched data .root file")
     parser.add_argument("--rel_abundances", help="histogram of Ni/Nref")
-    parser.add_argument("--p_to_mu", help="path to proton->mu eff", default=None)
-    parser.add_argument("--pi_to_mu", help="path to pion->mu eff", default=None)
-    parser.add_argument("--k_to_mu", help="path to kaon->mu eff", default=None)
-    parser.add_argument("--e_to_mu", help="path to electron->mu eff", default=None)
-    parser.add_argument("--g_to_mu", help="path to ghost->mu eff", default=None)
+    parser.add_argument("--proton_to_mu", help="path to proton->mu eff", default=None)
+    parser.add_argument("--pion_to_mu", help="path to pion->mu eff", default=None)
+    parser.add_argument("--kaon_to_mu", help="path to kaon->mu eff", default=None)
     parser.add_argument(
-        "--p_to_antimu",
+        "--electron_to_mu", help="path to electron->mu eff", default=None
+    )
+    parser.add_argument("--ghost_to_mu", help="path to ghost->mu eff", default=None)
+    parser.add_argument(
+        "--proton_to_antimu",
         help="path to proton->!mu eff [ie containted in hadron-enriched data]",
         default=None,
     )
     parser.add_argument(
-        "--pi_to_antimu",
+        "--pion_to_antimu",
         help="path to pion->!mu eff [ie containted in hadron-enriched data]",
         default=None,
     )
     parser.add_argument(
-        "--k_to_antimu",
+        "--kaon_to_antimu",
         help="path to kaon->!mu eff [ie containted in hadron-enriched data]",
         default=None,
     )
     parser.add_argument(
-        "--e_to_antimu",
+        "--electron_to_antimu",
         help="path to electron->!mu eff [ie containted in hadron-enriched data]",
         default=None,
     )
     parser.add_argument(
-        "--g_to_antimu",
+        "--ghost_to_antimu",
         help="path to ghost->!mu eff [ie containted in hadron-enriched data]",
         default=None,
     )
@@ -152,8 +200,6 @@ if __name__ == "__main__":
     # relative abundance prefactors
     rel_n_sp = process_rel_n_hist(opts.rel_abundances, binning)
 
-    breakpoint()
-
     # hadron-enriched observations as lazyframe
     data = pl.from_pandas(
         simple_load(
@@ -163,42 +209,49 @@ if __name__ == "__main__":
         )
     ).lazy()
 
-    # Define the custom function
-    def custom_function(value, bin_idx=0):
-        # Example: use the bin index to modify the value
-        # Here, we divide the value by 1000 and multiply by the bin index + 1
-        if bin_idx is not None:
-            return (value / 1000) * (bin_idx + 1)
-        else:
-            return None  # Handle out-of-range values
+    # facilitate the lazy lambda syntax by assignining the kwargs independnent of bin coordinates
+    compute_misid_w_binwise = partial(
+        compute_misid_w,
+        pid_effs=pid_effs,
+        relative_yields=rel_n_sp,
+    )
 
     # Apply binning and pass both the value and bin index to the custom function
-    data = data.with_columns(
-        [
-            pl.col("Mu_plus_P")
-            .cut(
-                breaks=binning["Brunel_P"],
-                labels=[str(i) for i in range(len(binning["Brunel_P"]) + 1)],
-            )
-            .alias("P_idx"),
-            pl.col("Mu_plus_LK_ETA")
-            .cut(
-                breaks=binning["Brunel_ETA"],
-                labels=[str(i) for i in range(len(binning["Brunel_ETA"]) + 1)],
-            )
-            .alias("ETA_idx"),
-            pl.col("nTracks")
-            .cut(
-                breaks=binning["nTracks_Brunel"],
-                labels=[str(i) for i in range(len(binning["nTracks_Brunel"]) + 1)],
-            )
-            .alias("nTracks_idx"),
-        ]
-    ).with_columns(
-        pl.struct(["P_idx", "ETA_idx", "nTracks_idx"])
-        .map_elements(
-            lambda x: int(x["P_idx"]) + int(x["ETA_idx"]) + int(x["nTracks_idx"]),
-            return_dtype=pl.Float64,
+    data_update = (
+        data.with_columns(
+            [
+                pl.col("Mu_plus_P")
+                .cut(
+                    breaks=binning["Brunel_P"],
+                    labels=[str(i) for i in range(len(binning["Brunel_P"]) + 1)],
+                )
+                .alias("P_idx"),
+                pl.col("Mu_plus_LK_ETA")
+                .cut(
+                    breaks=binning["Brunel_ETA"],
+                    labels=[str(i) for i in range(len(binning["Brunel_ETA"]) + 1)],
+                )
+                .alias("ETA_idx"),
+                pl.col("nTracks")
+                .cut(
+                    breaks=binning["nTracks_Brunel"],
+                    labels=[str(i) for i in range(len(binning["nTracks_Brunel"]) + 1)],
+                )
+                .alias("nTracks_idx"),
+            ]
         )
-        .alias("dummy_var")
+        .with_columns(
+            pl.struct(["P_idx", "ETA_idx", "nTracks_idx"])
+            .map_elements(
+                lambda x: compute_misid_w_binwise(
+                    int(x["P_idx"]), int(x["ETA_idx"]), int(x["nTracks_idx"])
+                ),
+                return_dtype=pl.Float64,
+            )
+            .alias("misid_w")
+        )
+        .collect()  # materialise lazyframe to dataframe
+        # .to_pandas()  # covert back to pandas to be able to write out via uproot
     )
+
+    breakpoint()
