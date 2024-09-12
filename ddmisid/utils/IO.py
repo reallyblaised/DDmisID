@@ -353,17 +353,17 @@ def extract_sel_dict_branches(selection_dict: dict) -> list:
     -------
         list: A list of unique branch names used across all selections.
     """
-    branch_pattern = re.compile(r'\b[A-Za-z_]+\b(?=\s*[!<>=])')
+    branch_pattern = re.compile(r"\b[A-Za-z_]+\b(?=\s*[!<>=])")
     all_branches = set()
-    
+
     for selection in selection_dict.values():
         branches = branch_pattern.findall(selection)
         all_branches.update(branches)
-    
+
     return list(all_branches)
 
 
-def load_hist(path: str | Path) -> list:
-    """Load the boost histogram/Hist from pkl file"""
-    with open(f"{path}", "rb") as f:
-        return pickle.load(f)
+def load_hist(f):
+    """Load boost_histogram/Hist from pickle file"""
+    with open(f, "rb") as f_in:
+        return pickle.load(f_in)

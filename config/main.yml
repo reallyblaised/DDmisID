@@ -7,10 +7,10 @@ user_id: "bldelane" # CERN user ID for kinit @CERN.CH
 # test-run flag
 # =============
 # if true, run pidcalib in `--test` mode
-test: True
-max_calib_files: 25 # how many calibration samples to run over in pidcalib
+test: False
+max_calib_files: 25 # how many calibration samples to run over in pidcalib [applies only if test is True]
 # if true, produce all run info, including the path to calibration samples, TDirectiory and TTree
-verbose: True
+verbose: False 
 
 # =======================
 # pidcalib2 configuration - if in doubt: https://twiki.cern.ch/twiki/bin/view/LHCb/PIDCalibPackage#Which_variables_are_available_wi
@@ -21,7 +21,7 @@ pid:
   
   # alias : list[float, ...]
   binning:
-    "Brunel_P"       : [10_000, 15_000, 20_000, 25_000, 30_000, 40_000, 100_000]
+    "Brunel_P"       : [10_000, 20_000, 30_000, 40_000, 100_000]
     "Brunel_ETA"     : [1.5, 3.0, 5.0]  
     "nTracks_Brunel" : [0, 250, 1000] # checked that this is not used in any trigger/stripping cuts
   
@@ -64,7 +64,8 @@ pid:
 # DATA section: cuts applied to the hadron enriched *data*: the syntax must reflect the branch names in the user-defined ntuple
 # =============================================================================================================================
 data: 
-  path: "/work/submit/blaised/DDmisID/fakemuon_2018_MU.root" # path to hadron-enriched data file (pid + intermediate selection applied)
+  input_path: "/work/submit/blaised/DDmisID/fakemuon_2018_MU.root" # path to hadron-enriched data file (pid + intermediate selection applied)
+  output_path: "/work/submit/blaised/DDmisID/misid_w/fakemuon_2018_MU.root" # path to hadron-enriched data file (pid + intermediate selection applied)
 
   # prefix for muon branches in the data tuples
   data_prefixes: # NOTE: keys must match binning variable names
