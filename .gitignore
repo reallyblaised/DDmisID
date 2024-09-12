@@ -139,6 +139,7 @@ temp*
 *dev*
 *done
 *kevin*
+*.ipynb
 
 # Ignore PDF, PNG, and EPS files
 *.pdf
