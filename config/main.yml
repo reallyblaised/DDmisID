@@ -7,8 +7,8 @@ user_id: "bldelane" # CERN user ID for kinit @CERN.CH
 # test-run flag
 # =============
 # if true, run pidcalib in `--test` mode
-test: False
-max_calib_files: 25 # how many calibration samples to run over in pidcalib [applies only if test is True]
+test: True
+max_calib_files: 10 # how many calibration samples to run over in pidcalib [applies only if test is True]
 # if true, produce all run info, including the path to calibration samples, TDirectiory and TTree
 verbose: False 
 
