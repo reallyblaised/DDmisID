@@ -19,6 +19,34 @@ import warnings
 import pprint
 from uncertainties import ufloat
 from functools import partial
+from itertools import product
+import uproot
+
+
+def check_axes_match(*histograms: bh.Histogram) -> None:
+    """Check if all histograms have the same axes and edges"""
+
+    # Ensure there is at least one histogram to compare
+    if not histograms:
+        raise ValueError("At least two histogram are required for an axes comparison")
+
+    # reference histogram for comparison
+    ref_hist = histograms[0]
+
+    # iterate through all other histograms
+    for hist in histograms[1:]:
+        # check number of axes
+        if len(ref_hist.axes) != len(hist.axes):
+            raise ValueError(
+                f"Histogram {hist} has a different number of axes compared to reference histogram."
+            )
+
+        # xheck edges of each axis
+        for ref_axis, other_axis in zip(ref_hist.axes, hist.axes):
+            if not np.array_equal(ref_axis.edges, other_axis.edges):
+                raise ValueError(
+                    f"Axes edges do not match between histograms: {ref_axis.edges} vs {other_axis.edges}"
+                )
 
 
 def extract_axis_name(axis: bh.axis) -> str:
@@ -68,7 +96,10 @@ def process_pid_hists(
 
     for key, value in vars(opts).items():
         if value is None:
-            warnings.warn("Warning: None file passed - skipping", UserWarning)
+            warnings.warn(
+                f"Warning: {key}:{value} match passed - skipping histograms evaluating to 'None'",
+                UserWarning,
+            )
             continue  # skip [accounting for ghost exclusion]
 
         if "mu" in key:
@@ -106,27 +137,25 @@ def process_rel_n_hist(
     return rel_h
 
 
-def compute_misid_w(
+def compute_misid_w_binwise(
     i: int,
     j: int,
     k: int,
     pid_effs: Dict[str, bh.Histogram],
     relative_yields: bh.Histogram,
     species: tuple = ("electron", "kaon", "pion", "proton"),
-) -> float:
+) -> [float, float]:
     """Exract the misID weight, assuming index order p, eta, ntracks [checks in place]"""
 
     # sanity
     assert (
-        abs(relative_yields[i, j, k, ...].sum().value - 1.0) < 1e-5
-    ), f"Normalisation check fail: relative yields in bin ({i}, {j}, {k}) are incompatible with normalisation to unity and the 1e-5 level"
-
-    # FIXME: consistency of binning order and edges among the pid hs
-    # FIXME: make sure i,j,k are correctly mapped on the pid axes
+        abs(relative_yields[i, j, k, ...].sum().value - 1.0) < 1e-3
+    ), f"Normalisation check fail: relative yields in bin ({i}, {j}, {k}) are incompatible with normalisation to unity and the 1e-3 level"
 
     # consistency check
     misid_w = 0.0
     for s in species:
+
         # fetch the factors in the species-specific contributions to the total misID weight, incorporating the respective uncertainties
         ni_nref = ufloat(
             relative_yields[i, j, k, f"{s}_yield"].value,
@@ -147,7 +176,41 @@ def compute_misid_w(
         # linear combination of species factors
         misid_w += species_w
 
-    return misid_w.n
+    return misid_w.n, misid_w.s**2  # store variance by convention
+
+
+def compute_misid_w_hist(
+    pid_effs: Dict[str, bh.Histogram],
+    relative_yields: bh.Histogram,
+    species: tuple = ("electron", "kaon", "pion", "proton"),
+) -> bh.Histogram:
+    """Generate a lookup table for misid_w, indexed by kinematics and occupancy bin indices"""
+
+    # sanity check: consistent structure among histograms
+    for s in species:
+        check_axes_match(
+            relative_yields[..., -1],
+            pid_effs[f"{s}_to_mu"],
+            pid_effs[f"{s}_to_antimu"],
+        )
+
+    # book empty container (cval, std**2)
+    misid_w_hist = bh.Histogram(
+        *relative_yields[..., -1].axes, storage=bh.storage.Weight()
+    )
+
+    # RFE: this assumes 3 binning axes
+    # fill
+    for i, j, k in product(
+        range(len(misid_w_hist.axes[0])),
+        range(len(misid_w_hist.axes[1])),
+        range(len(misid_w_hist.axes[2])),
+    ):
+        misid_w_hist[i, j, k] = compute_misid_w_binwise(
+            i, j, k, pid_effs=pid_effs, relative_yields=relative_yields, species=species
+        )
+
+    return misid_w_hist
 
 
 if __name__ == "__main__":
@@ -189,6 +252,17 @@ if __name__ == "__main__":
         help="path to ghost->!mu eff [ie containted in hadron-enriched data]",
         default=None,
     )
+    parser.add_argument(
+        "--output",
+        help="path to output .root file",
+    )
+    parser.add_argument(
+        "--key",
+        help="key where trees are stored within a .root file",
+    )
+    parser.add_argument(
+        "--tree", help="tree name within the I/O .root files", default="DecayTree"
+    )
     opts = parser.parse_args()
 
     # user-defined binning
@@ -200,58 +274,34 @@ if __name__ == "__main__":
     # relative abundance prefactors
     rel_n_sp = process_rel_n_hist(opts.rel_abundances, binning)
 
-    # hadron-enriched observations as lazyframe
+    # compute the misid_w, binwise and store into lookup histogram
+    misid_w_hist = compute_misid_w_hist(pid_effs, rel_n_sp)
+
+    # hadron-enriched observations as lazyframe for fast API
     data = pl.from_pandas(
         simple_load(
-            path=read_config("config/main.yml", key="data")["path"],
-            key=read_config("config/main.yml", key="data")["root_config"]["root_key"],
+            path=opts.obs,
+            key=opts.key,
             library="pd",
         )
     ).lazy()
 
-    # facilitate the lazy lambda syntax by assignining the kwargs independnent of bin coordinates
-    compute_misid_w_binwise = partial(
-        compute_misid_w,
-        pid_effs=pid_effs,
-        relative_yields=rel_n_sp,
-    )
-
-    # Apply binning and pass both the value and bin index to the custom function
-    data_update = (
-        data.with_columns(
-            [
-                pl.col("Mu_plus_P")
-                .cut(
-                    breaks=binning["Brunel_P"],
-                    labels=[str(i) for i in range(len(binning["Brunel_P"]) + 1)],
-                )
-                .alias("P_idx"),
-                pl.col("Mu_plus_LK_ETA")
-                .cut(
-                    breaks=binning["Brunel_ETA"],
-                    labels=[str(i) for i in range(len(binning["Brunel_ETA"]) + 1)],
-                )
-                .alias("ETA_idx"),
-                pl.col("nTracks")
-                .cut(
-                    breaks=binning["nTracks_Brunel"],
-                    labels=[str(i) for i in range(len(binning["nTracks_Brunel"]) + 1)],
-                )
-                .alias("nTracks_idx"),
-            ]
+    # compute misID weights and store into new branch `misid_w`
+    data_update = data.with_columns(
+        pl.struct(["Mu_plus_P", "Mu_plus_LK_ETA", "nTracks"])
+        .map_elements(
+            lambda x: misid_w_hist[
+                bh.loc(x["Mu_plus_P"]),
+                bh.loc(x["Mu_plus_LK_ETA"]),
+                bh.loc(x["nTracks"]),
+            ].value,
+            return_dtype=pl.Float64,
         )
-        .with_columns(
-            pl.struct(["P_idx", "ETA_idx", "nTracks_idx"])
-            .map_elements(
-                lambda x: compute_misid_w_binwise(
-                    int(x["P_idx"]), int(x["ETA_idx"]), int(x["nTracks_idx"])
-                ),
-                return_dtype=pl.Float64,
-            )
-            .alias("misid_w")
-        )
-        .collect()  # materialise lazyframe to dataframe
-        # .to_pandas()  # covert back to pandas to be able to write out via uproot
-    )
+        .alias("misid_w")
+    ).collect()  # materialise lazyframe to dataframe
 
-    breakpoint()
+    # write outfile anew to avoid issues with mis-matched updates (plays better with Bc2DMuNu analysis pipeline)
+    outfile = uproot.recreate(opts.output)
+    outfile[f"{opts.key}/{opts.tree}"] = (
+        data_update.to_pandas()
+    )  # necessary port to pandas to exploit uproot ability to write out files

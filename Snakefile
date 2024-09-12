@@ -16,6 +16,7 @@ __email__ = "blaise.delaney at cern.ch"
 import shutil
 import os
 from snakemake.io import glob_wildcards    
+import pyfiglet
 
 # user-defined config, accessible in-scope via `config[key]`
 configfile: "config/main.yml"
@@ -28,6 +29,10 @@ rule all:
     """Target of the entire DDmisID workflow"""
     input:
         "ddmisid.done"
+    run: 
+        print(pyfiglet.figlet_format("misID", font = "isometric1" ))
+        print(pyfiglet.figlet_format("done", font = "isometric1" ))
+
 
 
 # ==================================================================================
@@ -113,7 +118,7 @@ checkpoint discretize_data:
     These have all kinematic & occupancy cuts applied, as well has the PID cuts for the hadron-enriched bins specified in the config file
     """
     input:
-        data_path = config["data"]["path"] 
+        data_path = config["data"]["input_path"] 
     output:
         directory("obs/"),
     log: 
@@ -281,17 +286,17 @@ rule extract_misid_weights:
         # FIXME: global_antimuon_eff_ghosts = fetch_pid_eff_sp_id("antimu_id", "proton", "all"),
         # hadron-enriched data, to which we want to assign weights
         # --------------------------------------------------------
-        hadron_enriched_data = config["data"]["path"]
+        hadron_enriched_data = config["data"]["input_path"]
     params:
-        executable = "ddmisid/assign_w_misid.py"
+        executable = "ddmisid/assign_w_misid.py",
+        root_key = config['data']['root_config']['root_key'],
+        root_tree_name = config['data']['root_config']['root_tree_name'],
+        outfile_path = config['data']['output_path']
     output:
-        # true abundance of each species, accounting for cross-contamination between reco bins
-        temp("ddmisid.done")
+        temp("ddmisid.done") # signal completion
     run:
         shell("python {params.executable} --rel_abundances {input.relative_true_abundances} --obs {input.hadron_enriched_data}\
-        --p_to_mu {input.proton_to_mu_eff} --pi_to_mu {input.pion_to_mu_eff} --k_to_mu {input.kaon_to_mu_eff} --e_to_mu {input.electron_to_mu_eff}\
-        --p_to_antimu {input.proton_to_antimu_eff} --pi_to_antimu {input.pion_to_antimu_eff} --k_to_antimu {input.kaon_to_antimu_eff} --e_to_antimu {input.electron_to_antimu_eff}\
-        ") 
-        shell("touch {output}") # dummy 
-
-
+        --proton_to_mu {input.proton_to_mu_eff} --pion_to_mu {input.pion_to_mu_eff} --kaon_to_mu {input.kaon_to_mu_eff} --electron_to_mu {input.electron_to_mu_eff}\
+        --proton_to_antimu {input.proton_to_antimu_eff} --pion_to_antimu {input.pion_to_antimu_eff} --kaon_to_antimu {input.kaon_to_antimu_eff} --electron_to_antimu {input.electron_to_antimu_eff}\
+        --output {params.outfile_path} --key {params.root_key} --tree {params.root_tree_name} \
+        && touch {output}") # temporary signal file only if main executable has run successfully
