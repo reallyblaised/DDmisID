@@ -84,6 +84,21 @@ rule run_pidcalib:
         shell("bash {input.bash_file}") #" &> {log}")
 
 
+rule process_pid_effs:
+    """
+    Within a nominal tollerance, round down efficiencies to 0.0 - this accounts also for the case where the efficiency is negative as computed by PIDCalib2
+    """
+    input:
+        pidcalib_hists = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl",
+    output:
+        postprocessed_pid_hists = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf_postprocessed.pkl",
+    log: 
+        "log/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/postprocessed_pid.log"
+    run:
+        shell("python ddmisid/postprocess_pid.py --input {input.pidcalib_hists} --output {output.postprocessed_pid_hists}") #" &> {log}")
+
+
+
 def aggregate_pidcalib(wildcards):
     '''
     Collect the variable number of sub-directories produced by setup.py that live in /exec/,
@@ -92,7 +107,7 @@ def aggregate_pidcalib(wildcards):
     checkpoint_output = checkpoints.gen_sh_files.get(**wildcards).output[0]
     year, magpol, dllmu_bin, species, eff_dirs = glob_wildcards(os.path.join(checkpoint_output, '{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh'))
 
-    return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl", zip, year=year, magpol=magpol, dllmu_bin=dllmu_bin, species=species, eff_dirs=eff_dirs)
+    return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf_postprocessed.pkl", zip, year=year, magpol=magpol, dllmu_bin=dllmu_bin, species=species, eff_dirs=eff_dirs)
 
 
 rule collect_pidcalib:
@@ -251,9 +266,9 @@ def fetch_pid_eff_sp_id(_dllmu_bin, _species, partition=None, _magpol="up"): # F
         # care in handling the inclusive !muon species-specific efficiency histogram
         match partition:
             case None:
-                return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl", zip, year=year, magpol=_magpol, dllmu_bin=_dllmu_bin, species=_species, eff_dirs=eff_dirs)
+                return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf_postprocessed.pkl", zip, year=year, magpol=_magpol, dllmu_bin=_dllmu_bin, species=_species, eff_dirs=eff_dirs)
             case _: 
-                return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl", zip, year=year, magpol=_magpol, dllmu_bin=_dllmu_bin, species=_species, eff_dirs=partition) # user-defined `eff_dirs`
+                return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf_postprocessed.pkl", zip, year=year, magpol=_magpol, dllmu_bin=_dllmu_bin, species=_species, eff_dirs=partition) # user-defined `eff_dirs`
     
     return fetch_eff
 
