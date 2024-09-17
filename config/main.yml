@@ -35,7 +35,7 @@ pid:
   
   # year-specific configuration
   years : ["2018"] 
-  magpols : ["up", "down"] # follow pidcalib2 syntax
+  magpols : ["up"] # follow pidcalib2 syntax
   
   # PIDCALIB section: adopt pidcalib syntax to extract efficiencies from calibration data
   # -------------------------------------------------------------------------------------
@@ -58,6 +58,26 @@ pid:
     pion_like      : "DLLK<0.0 & DLLp<0.0 & DLLe<0.0"
     proton_like    : "DLLp>0.0 & (DLLp-DLLK)>0.0 & (DLLp-DLLe)>0.0"
     electron_like  : "DLLe>0.0 & (DLLe-DLLK)>0.0 & (DLLe-DLLp)>0.0"
+
+  # ghosts section
+  # --------------
+  ghost_config: 
+    path: "root://eoslhcb.cern.ch//eos/lhcb/wg/semileptonic/Bc2D0MuNuX/ntuples/v4/MC/D0MuNu/2018/MU/MC_Bc2D0MuNu_2018_MU_pidgen.root"
+    key: None
+    tree: "DecayTree"
+    # if not None, apply selection - must match the hadron-enriched data selection
+    selection: "( B_plus_L0Global_TIS ) & \
+      ( ( (B_plus_Hlt1TwoTrackMVADecision_TOS) | (B_plus_Hlt1TrackMuonMVADecision_TOS) | (B_plus_Hlt1TrackMVADecision_TOS) | (B_plus_Hlt1TrackMuonDecision_TOS) ) | (B_plus_Hlt1TrackAllL0Decision_TOS ) ) &\
+      ( ( (B_plus_Hlt2Topo2BodyDecision_TOS) | (B_plus_Hlt2Topo3BodyDecision_TOS) | (B_plus_Hlt2Topo4BodyDecision_TOS) | (B_plus_Hlt2TopoMu2BodyDecision_TOS) | (B_plus_Hlt2TopoMu3BodyDecision_TOS) | (B_plus_Hlt2TopoMu4BodyDecision_TOS) ) | ( (B_plus_Hlt2Topo2BodyBBDTDecision_TOS) | (B_plus_Hlt2Topo3BodyBBDTDecision_TOS) | (B_plus_Hlt2Topo4BodyBBDTDecision_TOS) | (B_plus_Hlt2TopoMu2BodyBBDTDecision_TOS) | (B_plus_Hlt2TopoMu3BodyBBDTDecision_TOS) | (B_plus_Hlt2TopoMu4BodyBBDTDecision_TOS) ) | ( (B_plus_Hlt2SingleMuonDecision_TOS) ) ) & \
+      ( Mu_plus_PIDmu < 0 ) & \
+      ( (K_minus_PIDK>3) & (Pi_1_PIDK<0) ) & \
+      ( (Mu_plus_isMuon==False) & (Mu_plus_hasMuon==True) & (Mu_plus_NShared==0) & (Mu_plus_InMuonAcc==1) & (K_minus_hasRich==True) & (Pi_1_hasRich==True) & (K_minus_isMuon==False) & (Pi_1_isMuon==False) ) & \
+      ( (Mu_plus_IPCHI2_OWNPV>16) & (Pi_1_IPCHI2_OWNPV>16) & (K_minus_IPCHI2_OWNPV>16) ) & \
+      ( (Mu_plus_PT>1500) & (Mu_plus_P>10e3) & (Mu_plus_P<100e3) & (D0_M>1790) & (D0_M<1940) & (K_minus_P<100e3) & (Pi_1_P<100e3) ) & \
+      ( (B_plus_ENDVERTEX_Z-B_plus_PV_Z)>0 ) & \
+      ( (D0_FDCHI2_OWNPV>0) & (B_plus_IPCHI2_OWNPV>0) & (B_plus_FDCHI2_OWNPV>0) ) & \
+      (Mu_plus_ProbNNghost<0.1) & \
+      ( (Mu_plus_TRUEID==0) & (B_plus_TRUEID==0) & (B_plus_BKGCAT==60) )" # PDG numbering scheme and https://lhcb-doxygen.web.cern.ch/lhcb-doxygen/davinci/latest/df/d88/class_i_background_category.html for ghosts
 
 
 # =============================================================================================================================
