@@ -194,7 +194,6 @@ if __name__ == "__main__":
 
     # having built the workspace in pyhf, use cabinetry to fit and viz
     model, data = cabinetry.model_utils.model_and_data(workspace)
-    breakpoint()
     fit_results = cabinetry.fit.fit(model, data, custom_fit=True) # use iminuit directly
     model_pred_postfit = cabinetry.model_utils.prediction(model, fit_results=fit_results)
 

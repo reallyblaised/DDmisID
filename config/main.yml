@@ -7,8 +7,8 @@ user_id: "bldelane" # CERN user ID for kinit @CERN.CH
 # test-run flag
 # =============
 # if true, run pidcalib in `--test` mode
-test: True
-max_calib_files: 5 # how many calibration samples to run over in pidcalib [applies only if test is True]
+test: False
+max_calib_files: 33 # how many calibration samples to run over in pidcalib [applies only if test is True]
 # if true, produce all run info, including the path to calibration samples, TDirectiory and TTree
 verbose: False 
 
@@ -41,11 +41,11 @@ pid:
   # -------------------------------------------------------------------------------------
   # !muon ID for hadron-enriched data 
   antimu_id: 
-    pid_cut: "_ProbNNghost<0.1 & DLLmu<-5 & IsMuon==0.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2
+    pid_cut: "_ProbNNghost<0.1 & DLLmu<0.0 & IsMuon==0.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2
 
   # muon ID to select the signal-fit region  
   mu_id: 
-    pid_cut: "_ProbNNghost<0.1 & DLLmu>-3 & DLLmu<0 & DLLK<0.0 & DLLp<0.0 & IsMuon==1.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2 
+    pid_cut: "_ProbNNghost<0.1 & DLLmu>3.0 & DLLK<0.0 & DLLp<0.0 & IsMuon==1.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2 
 
   # selection shared between the hadron-enriched and signal samples. 
   # usually involving acceptance cuts, and the extrema of the mommentum range established in nominal events selection
@@ -79,7 +79,7 @@ data:
 
   # NOTE: follow awkward syntax: each selection cut enclosed by a set of brackets
   data_cuts: 
-    kaon      : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<-5) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDK>0.0) & ( (Mu_plus_PIDK-Mu_plus_PIDp)>0.0 ) & ( (Mu_plus_PIDK-Mu_plus_PIDe)>0.0 )"
-    pion      : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<-5) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDK<0.0) & (Mu_plus_PIDp<0.0) & (Mu_plus_PIDe<0.0)"
-    proton    : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<-5) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDp>0.0) & ( (Mu_plus_PIDp-Mu_plus_PIDK)>0.0 ) & ( (Mu_plus_PIDp-Mu_plus_PIDe)>0.0 )"
-    electron  : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<-5) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDe>0.0) & ( (Mu_plus_PIDe-Mu_plus_PIDK)>0.0 ) & ( (Mu_plus_PIDe-Mu_plus_PIDp)>0.0 )"
+    kaon      : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0.0) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDK>0.0) & ( (Mu_plus_PIDK-Mu_plus_PIDp)>0.0 ) & ( (Mu_plus_PIDK-Mu_plus_PIDe)>0.0 )"
+    pion      : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0.0) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDK<0.0) & (Mu_plus_PIDp<0.0) & (Mu_plus_PIDe<0.0)"
+    proton    : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0.0) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDp>0.0) & ( (Mu_plus_PIDp-Mu_plus_PIDK)>0.0 ) & ( (Mu_plus_PIDp-Mu_plus_PIDe)>0.0 )"
+    electron  : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0.0) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDe>0.0) & ( (Mu_plus_PIDe-Mu_plus_PIDK)>0.0 ) & ( (Mu_plus_PIDe-Mu_plus_PIDp)>0.0 )"
