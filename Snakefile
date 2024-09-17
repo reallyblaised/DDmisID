@@ -83,6 +83,9 @@ rule run_pidcalib:
     run:
         shell("bash {input.bash_file}") #" &> {log}")
 
+rule ghost_pid_effs:
+    """Mimic the PIDCalib2 behaviour on suitably truthmatched MC for ghost contamination modelling"""
+    
 
 rule process_pid_effs:
     """
@@ -121,11 +124,26 @@ rule collect_pidcalib:
         "echo {input} > {output.combined}"
 
 
-# # =========================================================================================
-# #                     Hadron-Enriched Data Partitioning Section
-# # -----------------------------------------------------------------------------------------
-# #   - partition HE data into species-specific bins, within kinematic & occupancy partitions 
-# # =========================================================================================
+# =========================================================================================
+#                                     Ghost Section
+# -----------------------------------------------------------------------------------------
+#   - Mimic PIDCalib2 on suitably truthmatched MC for ghost contamination modelling
+# =========================================================================================
+# checkpoint ghost_pid_effs:
+#     """
+#     Extract PID efficiencies from suitably truthmatched MC samples
+#     """
+#     input: 
+#         "pidcalib_efficiency_maps.done"
+#     output:
+#         directory("ghosts/"),
+
+
+# =========================================================================================
+#                     Hadron-Enriched Data Partitioning Section
+# -----------------------------------------------------------------------------------------
+#   - partition HE data into species-specific bins, within kinematic & occupancy partitions 
+# =========================================================================================
 checkpoint discretize_data:
     """
     Spawn the data bins in the form bespoke histograms (/obs/*/*.pkl)
