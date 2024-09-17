@@ -98,7 +98,6 @@ rule process_pid_effs:
         shell("python ddmisid/postprocess_pid.py --input {input.pidcalib_hists} --output {output.postprocessed_pid_hists}") #" &> {log}")
 
 
-
 def aggregate_pidcalib(wildcards):
     '''
     Collect the variable number of sub-directories produced by setup.py that live in /exec/,
