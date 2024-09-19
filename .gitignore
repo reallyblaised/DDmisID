@@ -146,6 +146,7 @@ temp*
 *.png
 *.eps
 !assets/*.png
+!assets/*.pdf
 
 # ignore .zip files
 *.zip
