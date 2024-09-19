@@ -17,7 +17,7 @@ The unfolding is executed by means of binned maximum-likelihood fits within. In 
 
 As an example, `DDmisID` extracts the true abundance of each species, in each bin of kinematics and occupancy, as yields extracted in fits such as this one:
 
-![Example postfit plot](example_postfit.png)
+![Example postfit plot](assets/example_postfit.png)
 *Binned maximum likelihood fit to orthogonal, high-purity partitions of the hadron-enriched data. The filled coloured histograms illustrate the post-fit extracted abundance of each species, accounting of cross-contamination between the partitions due to imperfect PID. Generated with in-house pseudo-data mimicking the LHCb reconstruction.*
 
 ## Developer (local) installation
