@@ -34,7 +34,6 @@ rule all:
         print(pyfiglet.figlet_format("done", font = "isometric1" ))
 
 
-
 # ==================================================================================
 #                          PID Efficiency Map Section
 # ----------------------------------------------------------------------------------
@@ -55,7 +54,6 @@ checkpoint gen_sh_files:
         dir = directory("bin/"),
     params: 
         user_id = config['user_id']
-    priority: 100
     run:
         command = "python {input.config_executable} --pid_regime reco --pid_regime he_all" 
         
@@ -119,7 +117,7 @@ rule collect_pidcalib:
     input:
         aggregate_pidcalib
     output:
-        combined = temp("pid_efficiency_maps.done"),
+        combined = temp("pidcalib_efficiency_maps.done"),
     shell:
         "echo {input} > {output.combined}"
 
@@ -129,14 +127,20 @@ rule collect_pidcalib:
 # -----------------------------------------------------------------------------------------
 #   - Mimic PIDCalib2 on suitably truthmatched MC for ghost contamination modelling
 # =========================================================================================
-# checkpoint ghost_pid_effs:
-#     """
-#     Extract PID efficiencies from suitably truthmatched MC samples
-#     """
-#     input: 
-#         "pidcalib_efficiency_maps.done"
-#     output:
-#         directory("ghosts/"),
+rule ghost_pid_effs_intermezzo:
+    """
+    Extract ghost-specific PID efficiencies from suitably truthmatched MC samples as proxy
+    No need to post-process, as ill-defined efficiencies in the ratio are logged as 0.0
+    """
+    input: 
+        "pidcalib_efficiency_maps.done"
+    output:
+        temp("all_pid_efficiency_maps.done"),
+    params:
+        year = config['pid']['years'],
+        magpol = config['pid']['magpols'],
+    shell:
+        "python ddmisid/ghost_pid_effs.py --year {params.year} --magpol {params.magpol} && touch {output}"
 
 
 # =========================================================================================
@@ -190,7 +194,7 @@ rule collect_discretizer:
 # ================================================================================================
 checkpoint make_templates:
     input:
-        pidcalib_done = "pid_efficiency_maps.done", # NOTE: required to build the templates
+        pidcalib_done = "all_pid_efficiency_maps.done", # NOTE: required to build the templates
         data_partitions_done = "data_partitions.done" # avoid checkpoint conflict with data discretisation
     params:
         executable = "ddmisid/make_templates.py",
@@ -220,6 +224,10 @@ rule bml_fit:
             "templates/{p}/{eta}/{ntracks}/{species}.pkl".\
             format(p=wildcards.p, eta=wildcards.eta, ntracks=wildcards.ntracks, species="electron")
         ],
+        ghost_template = lambda wildcards: [
+            "templates/{p}/{eta}/{ntracks}/{species}.pkl".\
+            format(p=wildcards.p, eta=wildcards.eta, ntracks=wildcards.ntracks, species="ghost")
+        ],
         # observations
         obs = lambda wildcards: [
             "obs/{p}/{eta}/{ntracks}/obs.pkl".\
@@ -238,6 +246,7 @@ rule bml_fit:
             --kaon {input.kaon_template}\
             --proton {input.proton_template}\
             --electron {input.electron_template}\
+            --ghost {input.ghost_template}\
             --obs {input.obs}" #&> {log}" # FIXME: ghosts missing 
         )
 

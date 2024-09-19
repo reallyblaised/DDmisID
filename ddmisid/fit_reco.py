@@ -17,7 +17,7 @@ plt.style.use(["science", "no-latex"])
 cabinetry.set_logging()
 
 
-def assign_reco_labels(categories: list, include_ghosts: bool = False) -> list:
+def assign_reco_labels(categories: list, include_ghosts: bool = True) -> list:
     """Assign reco labels to the categories"""
     labels = []
     for i in categories:
@@ -28,7 +28,7 @@ def assign_reco_labels(categories: list, include_ghosts: bool = False) -> list:
             case "electron": labels.append(r"$e$")
             case "ghost": 
                 if include_ghosts:
-                    labels.append(r"Ghosts")
+                    labels.append(r"g")
     
     return labels
 
@@ -83,10 +83,17 @@ def build_sample_spec(
             # if there is something to load, do it
             _template_h = load_hist(template)
             # build the samples
-            samples.append(
-               build_template_spec(template_name, 
-                    list(_template_h.view().value / np.sum(_template_h.view().value)) # normalise to unity                   
-               )
+            if np.any(_template_h.view().value): # at least one non-zero bin entry
+                samples.append(
+                    build_template_spec(template_name, 
+                        list(_template_h.view().value / np.sum(_template_h.view().value)) # normalise to unity                   
+                )
+            )
+            else: # empty - fill with placeholder small template bin contents
+                samples.append(
+                    build_template_spec(template_name, 
+                        [1e-6 for val in _template_h.view().value] # dummy value to avoid 0.0, aiding the NLL minimisation                    
+                )
             )
     return samples
 
@@ -100,7 +107,7 @@ def build_channel_spec(
     ghost_template: Optional[list] = None,
 )->object:
     """Build the schema for the channel"""
-    observations = list(load_hist(obs).view()[:-1]) # FIXME: neglect ghost partition temporarily
+    observations = list(load_hist(obs).view())
     schema = {
         "channels": [
             {
@@ -143,11 +150,11 @@ def build_channel_spec(
                         "bounds": [[0.0, np.sum(observations)]],
                         "inits": [np.sum(observations)/10.0] # initialise at 10% of the data   
                     },
-                    # { # FIXME: ghosts excluded
-                    #     "name": "ghost_yield",
-                    #     "bounds": [[0.0, np.sum(observations)]],
-                    #     "inits": [np.sum(observations)/10.0] # initialise at 10% of the data   
-                    # },
+                    {
+                        "name": "ghost_yield",
+                        "bounds": [[0.0, np.sum(observations)]],
+                        "inits": [np.sum(observations)/10.0] # initialise at 10% of the data   
+                    },
                 ]}
             }
         ],
@@ -218,7 +225,7 @@ if __name__ == "__main__":
         "pion": "#1d91c0",
         "kaon": "#7fcdbb",
         "electron": "#edf8b1",
-        "ghost": "#969696",
+        "ghost": "#081d58",
     }
     figures = cabinetry.visualize.data_mc(model_pred_postfit, data, colors=colors, save_figure=False)
     fig = figures[0]["figure"]
@@ -239,7 +246,7 @@ if __name__ == "__main__":
 
     # sanity checks - inspect the compatibility (assume ghosts are the last entry)
     _obs = load_hist(opts.obs)
-    assert _obs.view()[:4].all() == obs.all()
+    assert _obs.view().all() == obs.all()
 
     # book canvas
     fig_pull, ax, axp = data_pull_plot(
@@ -269,6 +276,7 @@ if __name__ == "__main__":
             case 'pion': cosmetics = {'color' : colors['pion'], 'edgecolor' : colors['pion'], 'label' : r"$\pi$"}
             case 'kaon': cosmetics = {'color' : colors['kaon'], 'edgecolor' : colors['kaon'], 'label' : r"$K$"}
             case 'electron': cosmetics = {'color' : colors['electron'], 'edgecolor' : colors['electron'], 'label' : r"$e$"}
+            case 'ghost': cosmetics = {'color' : colors['ghost'], 'edgecolor' : colors['ghost'], 'label' : r"g"}
             case 'total': cosmetics = {'edgecolor': '#b10026', 'label' : 'Model', 'facecolor' : None}
             case _:
                 break
@@ -313,6 +321,8 @@ if __name__ == "__main__":
             )                
 
             # data/model subplot
+            # HACK: replace absolute zero yield with small values
+            y[y==0.0] = ufloat(1e-6, 1e-6)
             dom = obs/y
             uobs = np.array([
                 ufloat(o, o**.5) for o in obs
@@ -346,7 +356,12 @@ if __name__ == "__main__":
             )  # Set y-axis tick label font size to small
 
     # legend
-    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    handles, labels = ax.get_legend_handles_labels()
+    order =[0, 1, 3, 4, 5, 2, 6] # order of legend
+    ax.legend(
+        [handles[idx] for idx in order], [labels[idx] for idx in order],    
+        loc='center left', bbox_to_anchor=(1, 0.5)
+    )
     ax.ticklabel_format(style='scientific', axis='y', scilimits=(0,0))  # Force scientific notation
 
     # save figs

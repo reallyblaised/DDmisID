@@ -92,7 +92,7 @@ class Discretizer:
         Each row is evaluated against the conditions, and the first match assigns the label.
         If no conditions match, the label is 'Unclassified'.
         """
-        # Initialize the 'reco' column with 'Unclassified'
+        # Initialize the 'reco' column with 'ghost' -> all evading the reco partitions are defined as ghosts
         self.data["reco"] = "ghost"
 
         # Loop through each particle type and its associated condition

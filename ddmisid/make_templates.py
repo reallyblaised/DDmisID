@@ -187,6 +187,10 @@ class ElectronTemplateMaker(HadronTemplateMaker):
     pass
 
 
+class GhostTemplateMaker(HadronTemplateMaker):
+    pass
+
+
 class TemplateMakerFactory:
     """
     Factory class for TemplateMaker selection.
@@ -201,6 +205,7 @@ class TemplateMakerFactory:
             "pion": PionTemplateMaker,
             "proton": ProtonTemplateMaker,
             "electron": ElectronTemplateMaker,
+            "ghost": GhostTemplateMaker,
         }
 
     def create_maker(self, mode: str) -> TemplateMaker:
@@ -226,7 +231,11 @@ if __name__ == "__main__":
 
     # get binning, species from config file
     pid_config = read_config("config/main.yml", key="pid")
-    binning, reco_categories = pid_config["binning"], list(pid_config["species"].keys())
+    binning, reco_categories = pid_config["binning"], list(
+        pid_config["species"].keys()
+    ) + [
+        "ghost"
+    ]  # NOTE: ghosts are defined as the complement of the union of the hadron and electron partitions
     # make templates
     for species in reco_categories:
         templates = TemplateMakerFactory().create_maker(species)(

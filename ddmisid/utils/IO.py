@@ -209,6 +209,7 @@ def simple_load(
     max_events: int | None = None,
     library: str | None = "pd",
     cut: str | None = None,
+    timeout: int | None = 500,
     **kwargs: Any,
 ) -> Any:
     """Load a pandas DataFrame from a ROOT file.
@@ -237,9 +238,9 @@ def simple_load(
 
     """
     if key is not None:
-        events = uproot.open(f"{path}:{key}/{tree}")
+        events = uproot.open(f"{path}:{key}/{tree}", timeout=timeout)
     else:
-        events = uproot.open(f"{path}:{tree}")
+        events = uproot.open(f"{path}:{tree}", timeout=timeout)
 
     # load into pandas DataFrame
     return events.arrays(

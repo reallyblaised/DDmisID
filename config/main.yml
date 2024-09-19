@@ -7,8 +7,8 @@ user_id: "bldelane" # CERN user ID for kinit @CERN.CH
 # test-run flag
 # =============
 # if true, run pidcalib in `--test` mode
-test: False
-max_calib_files: 33 # how many calibration samples to run over in pidcalib [applies only if test is True]
+test: True
+max_calib_files: 3 # how many calibration samples to run over in pidcalib [applies only if test is True]
 # if true, produce all run info, including the path to calibration samples, TDirectiory and TTree
 verbose: False 
 
@@ -39,13 +39,13 @@ pid:
   
   # PIDCALIB section: adopt pidcalib syntax to extract efficiencies from calibration data
   # -------------------------------------------------------------------------------------
-  # !muon ID for hadron-enriched data 
+  # muno-specific PID selection to isolate the single-track hadron-enriched data 
   antimu_id: 
     pid_cut: "_ProbNNghost<0.1 & DLLmu<0.0 & IsMuon==0.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2
 
-  # muon ID to select the signal-fit region  
+  # muon-specific PID selection in the signal-fit region  
   mu_id: 
-    pid_cut: "_ProbNNghost<0.1 & DLLmu>3.0 & DLLK<0.0 & DLLp<0.0 & IsMuon==1.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2 
+    pid_cut: "_ProbNNghost<0.1 & DLLmu>3.0 & IsMuon==1.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2 
 
   # selection shared between the hadron-enriched and signal samples. 
   # usually involving acceptance cuts, and the extrema of the mommentum range established in nominal events selection
@@ -58,6 +58,8 @@ pid:
     pion_like      : "DLLK<0.0 & DLLp<0.0 & DLLe<0.0"
     proton_like    : "DLLp>0.0 & (DLLp-DLLK)>0.0 & (DLLp-DLLe)>0.0"
     electron_like  : "DLLe>0.0 & (DLLe-DLLK)>0.0 & (DLLe-DLLp)>0.0"
+    # define `ghost-like` the partition evading all the above, in a slight abuse of notation
+    ghost_like: "((DLLK < 0) | (DLLK == 0) | (DLLK - DLLp < 0) | (DLLK - DLLp == 0) | (DLLK - DLLe < 0) | (DLLK - DLLe == 0)) & ((DLLK > 0) | (DLLK == 0) | (DLLp > 0) | (DLLp == 0) | (DLLe > 0) | (DLLe == 0)) & ((DLLp < 0) | (DLLp == 0) | (DLLp - DLLK < 0) | (DLLp - DLLK == 0) | (DLLp - DLLe < 0) | (DLLp - DLLe == 0)) & ((DLLe < 0) | (DLLe == 0) | (DLLe - DLLK < 0) | (DLLe - DLLK == 0) | (DLLe - DLLp < 0) | (DLLe - DLLp == 0))"
 
   # ghosts section
   # --------------
@@ -65,19 +67,19 @@ pid:
     path: "root://eoslhcb.cern.ch//eos/lhcb/wg/semileptonic/Bc2D0MuNuX/ntuples/v4/MC/D0MuNu/2018/MU/MC_Bc2D0MuNu_2018_MU_pidgen.root"
     key: None
     tree: "DecayTree"
-    # if not None, apply selection - must match the hadron-enriched data selection
-    selection: "( B_plus_L0Global_TIS ) & \
+    # PID-less selection mimicking the hadron-enriched data selection -- PID excluded to be able to extract all necessary PID efficiencies 
+    hadron_enriched_def_sel: "( B_plus_L0Global_TIS ) & \
       ( ( (B_plus_Hlt1TwoTrackMVADecision_TOS) | (B_plus_Hlt1TrackMuonMVADecision_TOS) | (B_plus_Hlt1TrackMVADecision_TOS) | (B_plus_Hlt1TrackMuonDecision_TOS) ) | (B_plus_Hlt1TrackAllL0Decision_TOS ) ) &\
       ( ( (B_plus_Hlt2Topo2BodyDecision_TOS) | (B_plus_Hlt2Topo3BodyDecision_TOS) | (B_plus_Hlt2Topo4BodyDecision_TOS) | (B_plus_Hlt2TopoMu2BodyDecision_TOS) | (B_plus_Hlt2TopoMu3BodyDecision_TOS) | (B_plus_Hlt2TopoMu4BodyDecision_TOS) ) | ( (B_plus_Hlt2Topo2BodyBBDTDecision_TOS) | (B_plus_Hlt2Topo3BodyBBDTDecision_TOS) | (B_plus_Hlt2Topo4BodyBBDTDecision_TOS) | (B_plus_Hlt2TopoMu2BodyBBDTDecision_TOS) | (B_plus_Hlt2TopoMu3BodyBBDTDecision_TOS) | (B_plus_Hlt2TopoMu4BodyBBDTDecision_TOS) ) | ( (B_plus_Hlt2SingleMuonDecision_TOS) ) ) & \
-      ( Mu_plus_PIDmu < 0 ) & \
       ( (K_minus_PIDK>3) & (Pi_1_PIDK<0) ) & \
-      ( (Mu_plus_isMuon==False) & (Mu_plus_hasMuon==True) & (Mu_plus_NShared==0) & (Mu_plus_InMuonAcc==1) & (K_minus_hasRich==True) & (Pi_1_hasRich==True) & (K_minus_isMuon==False) & (Pi_1_isMuon==False) ) & \
+      ( (K_minus_hasRich==True) & (Pi_1_hasRich==True) & (K_minus_isMuon==False) & (Pi_1_isMuon==False) ) & \
       ( (Mu_plus_IPCHI2_OWNPV>16) & (Pi_1_IPCHI2_OWNPV>16) & (K_minus_IPCHI2_OWNPV>16) ) & \
       ( (Mu_plus_PT>1500) & (Mu_plus_P>10e3) & (Mu_plus_P<100e3) & (D0_M>1790) & (D0_M<1940) & (K_minus_P<100e3) & (Pi_1_P<100e3) ) & \
       ( (B_plus_ENDVERTEX_Z-B_plus_PV_Z)>0 ) & \
       ( (D0_FDCHI2_OWNPV>0) & (B_plus_IPCHI2_OWNPV>0) & (B_plus_FDCHI2_OWNPV>0) ) & \
-      (Mu_plus_ProbNNghost<0.1) & \
+      ( Mu_plus_NShared==0 ) & \
       ( (Mu_plus_TRUEID==0) & (B_plus_TRUEID==0) & (B_plus_BKGCAT==60) )" # PDG numbering scheme and https://lhcb-doxygen.web.cern.ch/lhcb-doxygen/davinci/latest/df/d88/class_i_background_category.html for ghosts
+    branch_prefix: "Mu_plus" # in converting the (anti)muon_id cuts above, I must establish the branch prefix for specific to the ghost ntuple
 
 
 # =============================================================================================================================
@@ -103,3 +105,5 @@ data:
     pion      : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0.0) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDK<0.0) & (Mu_plus_PIDp<0.0) & (Mu_plus_PIDe<0.0)"
     proton    : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0.0) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDp>0.0) & ( (Mu_plus_PIDp-Mu_plus_PIDK)>0.0 ) & ( (Mu_plus_PIDp-Mu_plus_PIDe)>0.0 )"
     electron  : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0.0) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDe>0.0) & ( (Mu_plus_PIDe-Mu_plus_PIDK)>0.0 ) & ( (Mu_plus_PIDe-Mu_plus_PIDp)>0.0 )"
+    # NOTE: I decided to absorb any residual candidates in the data in a `ghost` partition defined containing candidates evading the above; below, what I would write to match the string passed to pidcalib2. Both approaches yeild the same result as verified on 2018 MU data. 
+    #ghost     : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0.0) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & ( ((Mu_plus_PIDK < 0) | (Mu_plus_PIDK == 0) | (Mu_plus_PIDK - Mu_plus_PIDp < 0) | (Mu_plus_PIDK - Mu_plus_PIDp == 0) | (Mu_plus_PIDK - Mu_plus_PIDe < 0) | (Mu_plus_PIDK - Mu_plus_PIDe == 0)) & ((Mu_plus_PIDK > 0) | (Mu_plus_PIDK == 0) | (Mu_plus_PIDp > 0) | (Mu_plus_PIDp == 0) | (Mu_plus_PIDe > 0) | (Mu_plus_PIDe == 0)) & ((Mu_plus_PIDp < 0) | (Mu_plus_PIDp == 0) | (Mu_plus_PIDp - Mu_plus_PIDK < 0) | (Mu_plus_PIDp - Mu_plus_PIDK == 0) | (Mu_plus_PIDp - Mu_plus_PIDe < 0) | (Mu_plus_PIDp - Mu_plus_PIDe == 0)) & ((Mu_plus_PIDe < 0) | (Mu_plus_PIDe == 0) | (Mu_plus_PIDe - Mu_plus_PIDK < 0) | (Mu_plus_PIDe - Mu_plus_PIDK == 0) | (Mu_plus_PIDe - Mu_plus_PIDp < 0) | (Mu_plus_PIDe - Mu_plus_PIDp == 0)) )"
