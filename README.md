@@ -8,9 +8,7 @@ $$
 w_{\mathrm{misID}} = \sum_{i\in\{p,K,\pi,e,g\}} \frac{N_i}{N_{\mathrm{ref}}} \frac{1}{\varepsilon_{\mathrm{PID}}{(i \to !\mu)}}\varepsilon_{\mathrm{PID}}(i\to \mu)
 $$, 
 where the true abundance of each species in the reference control sample, $N_i$, is given by unfolding the observed abundance of each species in high-purity partitions of the control sample, accounting for cross-contamination due to imperfect particle identification (PID):
-$$
-N_i^{\mathrm{obs}} = \sum_i \sum_j N_i^{\mathrm{}}\,\varepsilon(i\to j) 
-$$. 
+$$N_i^{\mathrm{obs}} = \sum_i \sum_j N_i^{\mathrm{}}\,\varepsilon(i\to j)$$
 Here, $j$ indexes the high-purity partitions in the reference sample, and $i \in \{p, K, \pi, e, g\}$ (with $g$ denoting _ghosts_ in the LHCb reconstruction jargon).
 
 The unfolding is executed by means of binned maximum-likelihood fits within. In turn, each fit is executed in bins of kinematics and occupaancy, to account for the variation of PID responses with momentum, pseudo-rapidity, and detector occupancy. 
@@ -20,7 +18,7 @@ As an example, `DDmisID` extracts the true abundance of each species, in each bi
 <div style="text-align:center;">
   <img src="assets/example_postfit.png" alt="Example postfit plot" style="width:100%; max-width:100%;">
 </div>
-*Binned maximum likelihood fit to orthogonal, high-purity partitions of the hadron-enriched data. The filled coloured histograms illustrate the post-fit extracted abundance of each species, accounting of cross-contamination between the partitions due to imperfect PID. Generated with in-house pseudo-data mimicking the LHCb reconstruction.*
+Binned maximum likelihood fit to orthogonal, high-purity partitions of the hadron-enriched data. The filled coloured histograms illustrate the post-fit extracted abundance of each species, accounting of cross-contamination between the partitions due to imperfect PID. Generated with in-house pseudo-data mimicking the LHCb reconstruction.
 
 ## Developer (local) installation
 
