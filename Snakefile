@@ -247,7 +247,7 @@ rule bml_fit:
             --proton {input.proton_template}\
             --electron {input.electron_template}\
             --ghost {input.ghost_template}\
-            --obs {input.obs}" #&> {log}" # FIXME: ghosts missing 
+            --obs {input.obs} &> {log}" 
         )
 
 

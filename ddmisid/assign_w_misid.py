@@ -143,11 +143,12 @@ def compute_misid_w_binwise(
     k: int,
     pid_effs: Dict[str, bh.Histogram],
     relative_yields: bh.Histogram,
-    species: tuple = ("electron", "kaon", "pion", "proton"),
+    species: tuple = ("electron", "kaon", "pion", "proton", "ghost"),
 ) -> [float, float]:
     """Exract the misID weight, assuming index order p, eta, ntracks [checks in place]"""
 
     # sanity
+    print(relative_yields[i, j, k, ...])
     assert (
         abs(relative_yields[i, j, k, ...].sum().value - 1.0) < 1e-3
     ), f"Normalisation check fail: relative yields in bin ({i}, {j}, {k}) are incompatible with normalisation to unity and the 1e-3 level"

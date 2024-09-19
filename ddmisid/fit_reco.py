@@ -16,6 +16,7 @@ import matplotlib.patches as patches
 plt.style.use(["science", "no-latex"])
 cabinetry.set_logging()
 
+USE_PULLS = True
 
 def assign_reco_labels(categories: list, include_ghosts: bool = True) -> list:
     """Assign reco labels to the categories"""
@@ -92,7 +93,7 @@ def build_sample_spec(
             else: # empty - fill with placeholder small template bin contents
                 samples.append(
                     build_template_spec(template_name, 
-                        [1e-6 for val in _template_h.view().value] # dummy value to avoid 0.0, aiding the NLL minimisation                    
+                        list(np.array([1e-6 for val in _template_h.view().value]) / np.sum([1e-6 for val in _template_h.view().value])) # dummy value to avoid 0.0, aiding the NLL minimisation but still normalised to unity           
                 )
             )
     return samples
@@ -203,9 +204,11 @@ if __name__ == "__main__":
     model, data = cabinetry.model_utils.model_and_data(workspace)
     fit_results = cabinetry.fit.fit(model, data, custom_fit=True) # use iminuit directly
     model_pred_postfit = cabinetry.model_utils.prediction(model, fit_results=fit_results)
+    # print fit results
+    postfit_info = cabinetry.tabulate.yields(model_pred_postfit, data) 
 
-    # persist the results
-    # -------------------
+    # persist the results, normalised to the observation -> Ni/Nref (prefactors in the linear combination of efficiencies in the extrapolation)
+    # -----------------------------------------------------------------------------------------------------------------------------------------
     results_info = {}    
     for i in range(len(fit_results.labels)):
         results_info[fit_results.labels[i]] = ufloat(
@@ -227,18 +230,8 @@ if __name__ == "__main__":
         "electron": "#edf8b1",
         "ghost": "#081d58",
     }
-    figures = cabinetry.visualize.data_mc(model_pred_postfit, data, colors=colors, save_figure=False)
-    fig = figures[0]["figure"]
-    ratio_panel = fig.get_axes()[1]
-    ratio_panel.set_xlabel(r"Hadron-enriched $reco$ categories")
-    ratio_panel.set_ylabel(r"Data/Model")
-    hist_plot = fig.get_axes()[0]
-    hist_plot.set_ylabel(r"Candidates [Arbitrary Units]") 
-
-
 
     # NOTE: custom viz of results
-    postfit_info = cabinetry.tabulate.yields(model_pred_postfit, data) 
     obs = np.array(
         list(postfit_info['yields_per_bin'][-1].values())[1:], 
         dtype=float
@@ -282,8 +275,6 @@ if __name__ == "__main__":
                 break
                 #raise KeyError(f"Unexpected sample: {postfit_info['yields_per_bin'][s_idx]['sample']}")
         
-
-
         # stacked per-species yields
         if category not in ('data', 'total'):
             y = np.array(
@@ -320,14 +311,25 @@ if __name__ == "__main__":
                 alpha=0.5
             )                
 
+
             # data/model subplot
-            # HACK: replace absolute zero yield with small values
-            y[y==0.0] = ufloat(1e-6, 1e-6)
-            dom = obs/y
             uobs = np.array([
-                ufloat(o, o**.5) for o in obs
+                            ufloat(o, o**.5) for o in obs
             ])
-            udom = uobs/y # data over model, accounting for poison errors
+            try:
+                dom = obs/y
+                udom = uobs/y # data over model, accounting for poison errors and error in the yields
+            except ZeroDivisionError:
+                # HACK: replace absolute zero yield with small values
+                epsilon = ufloat(1e-6, 1e-6) 
+                replace_zero = lambda x: x+epsilon if x.n == 0.0 else x
+                y = np.array([replace_zero(val) for val in y])
+                obs[obs==0] = 1e-6 # cvals only here
+                uobs = np.array([replace_zero(val) for val in uobs])
+                dom = obs/y
+                udom = uobs/y
+            
+            postfit_info['yields_per_bin'][s_idx]
             axp.axhline(1.0, color="black", lw=0.33, ls=":")
             axp.errorbar(
                 x = assign_reco_labels([_obs.axes['reco'][i] for i in range(_obs.axes['reco'].size)]),
@@ -362,6 +364,7 @@ if __name__ == "__main__":
         [handles[idx] for idx in order], [labels[idx] for idx in order],    
         loc='center left', bbox_to_anchor=(1, 0.5)
     )
+    ax.set_ylim(bottom=0.0)
     ax.ticklabel_format(style='scientific', axis='y', scilimits=(0,0))  # Force scientific notation
 
     # save figs
