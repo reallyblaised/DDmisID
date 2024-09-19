@@ -19,7 +19,8 @@ As an example, `DDmisID` extracts the true abundance of each species, in each bi
 <div style="text-align:center;">
   <img src="assets/example_postfit.png" alt="Example postfit plot" style="width:100%; max-width:100%;">
 </div>
-Binned maximum likelihood fit to orthogonal, high-purity partitions of the hadron-enriched data. The filled coloured histograms illustrate the post-fit extracted abundance of each species, accounting of cross-contamination between the partitions due to imperfect PID. Generated with in-house pseudo-data mimicking the LHCb reconstruction.
+
+*Binned maximum likelihood fit to orthogonal, high-purity partitions of the hadron-enriched data. The filled coloured histograms illustrate the post-fit extracted abundance of each species, accounting of cross-contamination between the partitions due to imperfect PID. Generated with in-house pseudo-data mimicking the LHCb reconstruction*.
 
 ## Developer (local) installation
 
