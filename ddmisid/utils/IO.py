@@ -237,7 +237,9 @@ def simple_load(
         Loaded data. If library is None, return awkward arrays. Default is pandas DataFrame.
 
     """
-    if key is not None:
+    if (
+        key is not None and key != "None"
+    ):  # catch case in which None is parsed as a string
         events = uproot.open(f"{path}:{key}/{tree}", timeout=timeout)
     else:
         events = uproot.open(f"{path}:{tree}", timeout=timeout)

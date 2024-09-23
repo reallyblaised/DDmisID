@@ -68,7 +68,8 @@ def convert_pid_alias(pidcalib_alias: str, data_prefix: str) -> str:
     """Convert the PIDCalib2 aliases to the branches present in the ghost MC sample"""
     match pidcalib_alias:
         case "DLLmu": 
-            return f"{data_prefix}_PIDmu_corr" # ideally we'd like to add _corr to all PID branches, but let's work with this only for the moment
+            #return f"{data_prefix}_PIDmu_corr" # ideally we'd like to add _corr to all PID branches, but let's work with this only for the moment
+            return f"{data_prefix}_PIDmu" # ideally we'd like to add _corr to all PID branches, but let's work with this only for the moment
         case "DLLK": 
             return f"{data_prefix}_PIDK"
         case "DLLp": 
@@ -80,7 +81,8 @@ def convert_pid_alias(pidcalib_alias: str, data_prefix: str) -> str:
         case _ if "hasMuon" in pidcalib_alias:
             return f"{data_prefix}_hasMuon"
         case _ if "InMuonAcc" in pidcalib_alias:
-            return f"{data_prefix}_InMuonAcc"
+            #return f"{data_prefix}_PIDmu_corr" # ideally we'd like to add _corr to all PID branches, but let's work with this only for the moment
+            return f"{data_prefix}_LOKI_PP_InAccMuon"
         case _ if "ProbNNghost" in pidcalib_alias:
             return f"{data_prefix}_ProbNNghost"
         case _ if pidcalib_alias.endswith("_P"):
@@ -88,7 +90,8 @@ def convert_pid_alias(pidcalib_alias: str, data_prefix: str) -> str:
         case _ if pidcalib_alias.endswith("_PT"):
             return f"{data_prefix}_PT"
         case _ if pidcalib_alias.endswith("_ETA"):
-            return f"{data_prefix}_LK_ETA"
+            #return f"{data_prefix}_LK_ETA"
+            return f"{data_prefix}_LOKI_ETA"
         case _ if "nTracks" in pidcalib_alias:
             return f"nTracks"
         case _ if "nSPDHits" in pidcalib_alias:
@@ -175,6 +178,7 @@ if __name__ == "__main__":
     DENOM_HIST = book_pid_hist().fill(
         *simple_load(
             path=ghost_input_config["path"],
+            key=ghost_input_config["key"],
             tree=ghost_input_config["tree"],
             cut=ghost_input_config['hadron_enriched_def_sel'], # kinematics and geometry cuts (PID-less) bringing the ghost sample in line with the hadron-enriched data
             library="np",
@@ -200,7 +204,7 @@ if __name__ == "__main__":
     )
 
     # write to file 
-    outpath = Path(f"{opts.outdir}/{opts.year}/{opts.magpol}/mu_id/ghost/ghost_to_muon_like/perf.pkl")
+    outpath = Path(f"{opts.outdir}/{opts.year}/{opts.magpol}/mu_id/ghost/ghost_to_muon_like/perf_postprocessed.pkl")
     outpath.parent.mkdir(parents=True, exist_ok=True)
     with open(outpath, "wb") as f:
         pickle.dump(ghost_to_signal_eff, f)
@@ -222,7 +226,7 @@ if __name__ == "__main__":
         denom_hist=DENOM_HIST
     )
     # write to file 
-    outpath = Path(f"{opts.outdir}/{opts.year}/{opts.magpol}/antimu_id/ghost/all/perf.pkl")
+    outpath = Path(f"{opts.outdir}/{opts.year}/{opts.magpol}/antimu_id/ghost/all/perf_postprocessed.pkl")
     outpath.parent.mkdir(parents=True, exist_ok=True)
     with open(outpath, "wb") as f:
         pickle.dump(ghost_to_hadron_enriched_eff, f)
@@ -250,7 +254,7 @@ if __name__ == "__main__":
         )
 
         # write to file 
-        outpath = Path(f"{opts.outdir}/{opts.year}/{opts.magpol}/antimu_id/ghost/ghost_to_{target}/perf.pkl")
+        outpath = Path(f"{opts.outdir}/{opts.year}/{opts.magpol}/antimu_id/ghost/ghost_to_{target}/perf_postprocessed.pkl")
         outpath.parent.mkdir(parents=True, exist_ok=True)
         with open(outpath, "wb") as f:
             pickle.dump(ghost_to_target_eff, f)

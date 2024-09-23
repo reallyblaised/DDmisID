@@ -44,7 +44,7 @@ class HadronTemplateMaker(TemplateMaker):
         eff_hists_dict = {}
         for reco in self.template_bins:
             eff_hists_dict[reco] = self._open_eff_hist(
-                f"{species_path}/{reco}/perf.pkl"
+                f"{species_path}/{reco}/perf_postprocessed.pkl"
             )
         return eff_hists_dict
 

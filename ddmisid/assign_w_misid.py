@@ -21,6 +21,7 @@ from uncertainties import ufloat
 from functools import partial
 from itertools import product
 import uproot
+import warnings
 
 
 def check_axes_match(*histograms: bh.Histogram) -> None:
@@ -172,7 +173,15 @@ def compute_misid_w_binwise(
         )
 
         # species weight factor
-        species_w = ni_nref * (1 / denom_pid_eff) * num_pid_eff
+        if denom_pid_eff == 0.0 and num_pid_eff == 0.0:
+            # catch zero efficiency in both muon and antimuon channels
+            warnings.warn(
+                f"Warning: {s} has zero efficiency in both muon and antimuon channels - skipping",
+                UserWarning,
+            )
+            pass
+        else:
+            species_w = ni_nref * (1 / denom_pid_eff) * num_pid_eff
 
         # linear combination of species factors
         misid_w += species_w
@@ -183,7 +192,7 @@ def compute_misid_w_binwise(
 def compute_misid_w_hist(
     pid_effs: Dict[str, bh.Histogram],
     relative_yields: bh.Histogram,
-    species: tuple = ("electron", "kaon", "pion", "proton"),
+    species: tuple = ("electron", "kaon", "pion", "proton", "ghost"),
 ) -> bh.Histogram:
     """Generate a lookup table for misid_w, indexed by kinematics and occupancy bin indices"""
 
@@ -289,11 +298,11 @@ if __name__ == "__main__":
 
     # compute misID weights and store into new branch `misid_w`
     data_update = data.with_columns(
-        pl.struct(["Mu_plus_P", "Mu_plus_LK_ETA", "nTracks"])
+        pl.struct(["Kplus_P", "Kplus_LOKI_ETA", "nTracks"])
         .map_elements(
             lambda x: misid_w_hist[
-                bh.loc(x["Mu_plus_P"]),
-                bh.loc(x["Mu_plus_LK_ETA"]),
+                bh.loc(x["Kplus_P"]),
+                bh.loc(x["Kplus_LOKI_ETA"]),
                 bh.loc(x["nTracks"]),
             ].value,
             return_dtype=pl.Float64,

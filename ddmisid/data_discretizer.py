@@ -215,13 +215,14 @@ if __name__ == "__main__":
     reco_h = d.discretize()
 
     # save the histograms, looping through bins, projecting out the reco category in each bin
-    for i in range(len(reco_h.axes["Mu_plus_P"])):
-        for j in range(len(reco_h.axes["Mu_plus_LK_ETA"])):
-            for k in range(len(reco_h.axes["nTracks"])):
+    ax_i, ax_j, ax_k = list(binning.keys())
+    for i in range(len(reco_h.axes[ax_i])):
+        for j in range(len(reco_h.axes[ax_j])):
+            for k in range(len(reco_h.axes[ax_k])):
 
-                p_bin = f"{int(reco_h.axes['Mu_plus_P'][i][0])}-{int(reco_h.axes['Mu_plus_P'][i][1])}"
-                eta_bin = f"{reco_h.axes['Mu_plus_LK_ETA'][j][0]}-{reco_h.axes['Mu_plus_LK_ETA'][j][1]}"
-                ntracks_bin = f"{int(reco_h.axes['nTracks'][k][0])}-{int(reco_h.axes['nTracks'][k][1])}"
+                p_bin = f"{int(reco_h.axes[ax_i][i][0])}-{int(reco_h.axes[ax_i][i][1])}"
+                eta_bin = f"{reco_h.axes[ax_j][j][0]}-{reco_h.axes[ax_j][j][1]}"
+                ntracks_bin = f"{int(reco_h.axes[ax_k][k][0])}-{int(reco_h.axes[ax_k][k][1])}"
 
                 # save the histogram
                 d.save_histogram(

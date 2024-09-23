@@ -81,10 +81,7 @@ rule run_pidcalib:
     run:
         shell("bash {input.bash_file}") #" &> {log}")
 
-rule ghost_pid_effs:
-    """Mimic the PIDCalib2 behaviour on suitably truthmatched MC for ghost contamination modelling"""
     
-
 rule process_pid_effs:
     """
     Within a nominal tollerance, round down efficiencies to 0.0 - this accounts also for the case where the efficiency is negative as computed by PIDCalib2
@@ -287,8 +284,8 @@ def fetch_pid_eff_sp_id(_dllmu_bin, _species, partition=None, _magpol="up"): # F
         '''
         checkpoint_output = checkpoints.gen_sh_files.get(**wildcards).output[0]
         
-        year, eff_dirs = glob_wildcards(os.path.join(checkpoint_output, '{year}/'+_magpol+'/'+_dllmu_bin+'/'+_species+'/{eff_dirs}/run.sh'))
-        
+        year, eff_dirs = glob_wildcards(os.path.join(checkpoint_output, '{year}/'+_magpol+'/'+_dllmu_bin+'/'+_species+'/{eff_dirs}/perf_postprocessed.pkl'))
+
         # care in handling the inclusive !muon species-specific efficiency histogram
         match partition:
             case None:
@@ -317,14 +314,14 @@ rule extract_misid_weights:
         electron_to_mu_eff = fetch_pid_eff_sp_id("mu_id", "electron"),
         kaon_to_mu_eff = fetch_pid_eff_sp_id("mu_id", "kaon"),
         proton_to_mu_eff = fetch_pid_eff_sp_id("mu_id", "proton"),
-        # FIXME: ghosts
+        ghost_to_mu_eff = fetch_pid_eff_sp_id("mu_id", "ghost"),
         # species-specific PID efficiencies for h \in hadron-enriched-dataset [no partitions required]
         # --------------------------------------------------------------------------------------------
         proton_to_antimu_eff = fetch_pid_eff_sp_id("antimu_id", "proton", "all"), # all signifies in {!isMuon & DLLmu<0}
         kaon_to_antimu_eff = fetch_pid_eff_sp_id("antimu_id", "kaon", "all"),
         pion_to_antimu_eff = fetch_pid_eff_sp_id("antimu_id", "pion", "all"),
         electron_to_antimu_eff = fetch_pid_eff_sp_id("antimu_id", "electron", "all"),
-        # FIXME: global_antimuon_eff_ghosts = fetch_pid_eff_sp_id("antimu_id", "proton", "all"),
+        ghost_to_antimu_eff = fetch_pid_eff_sp_id("antimu_id", "ghost", "all"),
         # hadron-enriched data, to which we want to assign weights
         # --------------------------------------------------------
         hadron_enriched_data = config["data"]["input_path"]
@@ -337,7 +334,7 @@ rule extract_misid_weights:
         temp("ddmisid.done") # signal completion
     run:
         shell("python {params.executable} --rel_abundances {input.relative_true_abundances} --obs {input.hadron_enriched_data}\
-        --proton_to_mu {input.proton_to_mu_eff} --pion_to_mu {input.pion_to_mu_eff} --kaon_to_mu {input.kaon_to_mu_eff} --electron_to_mu {input.electron_to_mu_eff}\
-        --proton_to_antimu {input.proton_to_antimu_eff} --pion_to_antimu {input.pion_to_antimu_eff} --kaon_to_antimu {input.kaon_to_antimu_eff} --electron_to_antimu {input.electron_to_antimu_eff}\
+        --proton_to_mu {input.proton_to_mu_eff} --pion_to_mu {input.pion_to_mu_eff} --kaon_to_mu {input.kaon_to_mu_eff} --electron_to_mu {input.electron_to_mu_eff}  --ghost_to_mu {input.ghost_to_mu_eff}\
+        --proton_to_antimu {input.proton_to_antimu_eff} --pion_to_antimu {input.pion_to_antimu_eff} --kaon_to_antimu {input.kaon_to_antimu_eff} --electron_to_antimu {input.electron_to_antimu_eff} --ghost_to_antimu {input.ghost_to_antimu_eff}\
         --output {params.outfile_path} --key {params.root_key} --tree {params.root_tree_name} \
         && touch {output}") # temporary signal file only if main executable has run successfully
