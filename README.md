@@ -1,6 +1,7 @@
 <div style="text-align:left;">
-  <img src="assets/ddmisid_logo.png" alt="Example postfit plot" style="width:20%; max-width:20%;">
+  <img src="assets/ddmisid_logo.png" alt="Example postfit plot" style="width:40%; max-width:40%;">
 </div>
+
 # DDMisID
 
 Repository for the standalone tool **D**ata**D**riven**MisID** to extrapolate a misID template from a control region in data. Such a task is executed via the assignment of per-event weights.
@@ -20,7 +21,7 @@ The unfolding is executed by means of binned maximum-likelihood fits within. In 
 As an example, `DDmisID` extracts the true abundance of each species, in each bin of kinematics and occupancy, as yields extracted in fits such as this one:
 
 <div style="text-align:center;">
-  <img src="assets/postfit.png" alt="Example postfit plot" style="width:100%; max-width:100%;">
+  <img src="assets/postfit.png" alt="Example postfit plot" style="width:66%; max-width:66%;">
 </div>
 
 *Binned maximum likelihood fit to orthogonal, high-purity partitions of the hadron-enriched data. The filled coloured histograms illustrate the post-fit extracted abundance of each species, accounting of cross-contamination between the partitions due to imperfect PID. Generated with in-house pseudo-data mimicking the LHCb reconstruction*.
