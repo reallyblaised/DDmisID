@@ -30,7 +30,7 @@ def process_eff(hist):
                     f"PID efficiency value below 0.0 detected at index {index} within 1 sigma of 0.0: {view[index]}. Setting to 0.0"
                 )
                 view[index] = (
-                    0.0,
+                    1e-6,
                     abs(cval),  # FIXME: ascertain this is a sensible choice
                 )
             # within tolerance
@@ -41,7 +41,7 @@ def process_eff(hist):
                     f"PID efficiency value below 0.0 detected at index {index} with >1 sigma of 0.0 but below tolerance of {_pid_eff_tolerance}: {view[index]}. Setting to 0.0"
                 )
                 view[index] = (
-                    0.0,
+                    1e-6,
                     abs(cval),  # FIXME: ascertain this is a sensible choice
                 )
             # kill the process if the PID efficiency is below 0.0 and outside tolerance

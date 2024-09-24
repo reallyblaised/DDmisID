@@ -84,17 +84,20 @@ def build_sample_spec(
             # if there is something to load, do it
             _template_h = load_hist(template)
             # build the samples
-            if np.any(_template_h.view().value): # at least one non-zero bin entry
-                samples.append(
-                    build_template_spec(template_name, 
-                        list(_template_h.view().value / np.sum(_template_h.view().value)) # normalise to unity                   
-                )
-            )
-            else: # empty - fill with placeholder small template bin contents
-                samples.append(
-                    build_template_spec(template_name, 
-                        list(np.array([1e-6 for val in _template_h.view().value]) / np.sum([1e-6 for val in _template_h.view().value])) # dummy value to avoid 0.0, aiding the NLL minimisation but still normalised to unity           
-                )
+            # if np.any(_template_h.view().value): # at least one non-zero bin entry
+            #     samples.append(
+            #         build_template_spec(template_name, 
+            #             list(_template_h.view().value / np.sum(_template_h.view().value)) # normalise to unity                   
+            #     )
+            # )
+            # else: # empty - fill with placeholder small template bin contents
+
+            unnormalised_template = [val if val != 0.0 else 1e-6 for val in _template_h.view().value] # dummy value to avoid 0.0, aiding the NLL minimisation
+            normalised_template = list(np.array(unnormalised_template) / np.sum(unnormalised_template))
+            # sanity check
+            assert np.isclose(np.sum(normalised_template), 1.0), "Normalised template does not sum to unity"
+            samples.append(
+                build_template_spec(template_name, normalised_template)
             )
     return samples
 

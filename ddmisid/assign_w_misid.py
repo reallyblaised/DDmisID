@@ -152,7 +152,7 @@ def compute_misid_w_binwise(
     print(relative_yields[i, j, k, ...])
     assert (
         abs(relative_yields[i, j, k, ...].sum().value - 1.0) < 1e-3
-    ), f"Normalisation check fail: relative yields in bin ({i}, {j}, {k}) are incompatible with normalisation to unity and the 1e-3 level"
+    ), f"Normalisation check fail: relative yields in bin ({i}, {j}, {k}): {relative_yields[i, j, k, ...].sum().value} are incompatible with normalisation to unity and the 1e-3 level"
 
     # consistency check
     misid_w = 0.0

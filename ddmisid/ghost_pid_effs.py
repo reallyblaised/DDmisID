@@ -59,7 +59,7 @@ def compute_efficiency_hist(
             efficiency_hist[idx] = (efficiency, variance)
         else:
             # If the denominator is zero, set efficiency to zero and variance to zero
-            efficiency_hist[idx] = (0, 0)
+            efficiency_hist[idx] = (1e-6, 1e-6)
 
     return efficiency_hist
     

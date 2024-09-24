@@ -8,7 +8,7 @@ user_id: "bldelane" # CERN user ID for kinit @CERN.CH
 # =============
 # if true, run pidcalib in `--test` mode
 test: True
-max_calib_files: 50 # how many calibration samples to run over in pidcalib [applies only if test is True]
+max_calib_files: 33 # how many calibration samples to run over in pidcalib [applies only if test is True]
 # if true, produce all run info, including the path to calibration samples, TDirectiory and TTree
 verbose: False 
 
@@ -21,9 +21,9 @@ pid:
   
   # alias : list[float, ...]
   binning:
-    "Brunel_P"       : [10_000, 20_000, 30_000, 40_000, 50_000, 75_000, 100_000]
-    "Brunel_ETA"     : [1.5, 2.5, 3.5, 4.5, 5.5]  
-    "nTracks_Brunel" : [0, 150, 250, 1000] # checked that this is not used in any trigger/stripping cuts
+    "Brunel_P"       : [10_000, 20_000, 30_000, 40_000, 50_000, 100_000]
+    "Brunel_ETA"     : [1.5, 3.5, 5.5]  
+    "nTracks_Brunel" : [0, 500, 1000] # checked that this is not used in any trigger/stripping cuts
   
   # what species are considered in the makeup of the misID?
   # NOTE: take care to specify the species alias employed in pidcalib2
