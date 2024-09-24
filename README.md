@@ -1,4 +1,6 @@
-![DDmisID logo](./assets/ddmisid_logo.png)
+<div style="text-align:left;">
+  <img src="assets/ddmisid_logo.png" alt="Example postfit plot" style="width:20%; max-width:20%;">
+</div>
 # DDMisID
 
 Repository for the standalone tool **D**ata**D**riven**MisID** to extrapolate a misID template from a control region in data. Such a task is executed via the assignment of per-event weights.
