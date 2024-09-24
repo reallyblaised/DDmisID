@@ -1,3 +1,4 @@
+![DDmisID logo](./assets/ddmisid_logo.png)
 # DDMisID
 
 Repository for the standalone tool **D**ata**D**riven**MisID** to extrapolate a misID template from a control region in data. Such a task is executed via the assignment of per-event weights.
