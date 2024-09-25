@@ -4,25 +4,31 @@ setup(
     name="ddmisid",
     version="0.1",
     packages=find_packages(),
+    include_package_data=True,
     install_requires=[
         "numpy",
         "pandas",
         "scipy",
+        "awkward",
         "matplotlib",
         "boost-histogram",
         "hist",
         "uproot",
-        "iminuit<2.21",
+        "iminuit",
         "numba",
         "pyhf",
         "tqdm",
-        "colorama",
-        "termcolor",
         "tabulate",
         "pyyaml",
         "snakemake",
-        "termcolor2",
+        "click",
         "SciencePlots",
-        "uncertainties"
+        "uncertainties",
+        "cabinetry",
+        "polars",
     ],
+    entry_points="""
+        [console_scripts]
+        ddmisid-engine=ddmisid.cli:cli
+    """,
 )

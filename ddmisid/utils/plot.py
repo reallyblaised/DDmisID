@@ -12,7 +12,6 @@ from numpy.typing import ArrayLike
 import numpy as np
 from pathlib import Path
 from typing import Any
-import mplhep as hep
 import matplotlib as mpl
 import scienceplots
 
