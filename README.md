@@ -1,5 +1,5 @@
 <div style="text-align:left;">
-  <img src="assets/ddmisid_logo.png" alt="Example postfit plot" style="width:40%; max-width:40%;">
+  <img src="assets/DDmisID_logo.png" alt="Example postfit plot" style="width:40%; max-width:40%;">
 </div>
 
 # DDMisID
