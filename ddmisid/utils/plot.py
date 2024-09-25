@@ -1,8 +1,5 @@
 """Plotting utilities"""
 
-__author__ = "Blaise Delaney"
-__email__ = "blaise.delaney at cern.ch"
-
 from typing import Any, Optional, Union, List, Tuple
 import matplotlib.pyplot as plt
 from typing import Callable
@@ -14,25 +11,9 @@ from pathlib import Path
 from typing import Any
 import matplotlib as mpl
 import scienceplots
+from ddmisid import __version__ as VERSION
 
 plt.style.use(["science", "no-latex"])
-
-# custom color map
-mpl.rcParams["axes.prop_cycle"] = mpl.cycler(
-    color=[
-        "#d6604d",
-        "#4393c3",
-        "#b2182b",
-        "#2166ac",
-        "#f4a582",
-        "#053061",
-    ]
-)
-
-
-# software version
-VERSION = "0.1"
-
 
 # book the axes for postfit plot 
 # ------------------------------

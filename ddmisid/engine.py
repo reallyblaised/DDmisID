@@ -1,8 +1,10 @@
+"""Engine build and runs for the DDmisID pipeline."""
+
 from ddmisid.utils import read_config
 from loguru import logger
 
 
-def build_objects(config_path):
+def build_schema(config_path: str = "config/main.yml") -> dict:
     """Builds commonly referenced objects from the configuration."""
     # Read configuration
     config = read_config(config_path)
@@ -14,3 +16,8 @@ def build_objects(config_path):
 
     # Returning some object for example
     return config
+
+
+def run_workflow() -> None:
+    """Runs the Snakemake backend pipeline."""
+    pass

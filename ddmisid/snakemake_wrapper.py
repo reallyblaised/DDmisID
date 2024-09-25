@@ -1,3 +1,5 @@
+"""Wrapper for running the Snakemake pipeline within the DDmisID engine with Snakemake's dynamic flags."""
+
 import subprocess
 from loguru import logger
 
