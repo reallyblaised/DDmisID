@@ -40,12 +40,10 @@ pid:
   # PIDCALIB section: adopt pidcalib syntax to extract efficiencies from calibration data
   # -------------------------------------------------------------------------------------
   # muno-specific PID selection to isolate the single-track hadron-enriched data 
-  antimu_id: 
-    pid_cut: "_ProbNNghost<0.1 & DLLmu<0.0 & IsMuon==0.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2
+  control_pid_sel: "_ProbNNghost<0.1 & DLLmu<0.0 & IsMuon==0.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2
 
   # muon-specific PID selection in the signal-fit region  
-  mu_id: 
-    pid_cut: "_ProbNNghost<0.1 & DLLmu>3.0 & IsMuon==1.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2 
+  target_pid_sel: "_ProbNNghost<0.1 & DLLmu>3.0 & IsMuon==1.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2 
 
   # selection shared between the hadron-enriched and signal samples. 
   # usually involving acceptance cuts, and the extrema of the mommentum range established in nominal events selection
@@ -53,7 +51,7 @@ pid:
   common_sel: "probe_Brunel_NShared==0 & Brunel_P>10000 & Brunel_P<100000 & Brunel_PT>1500" # NOTE: ensure the extrema are compatible with the binning json files
 
   # pidcalib cuts of HE sample to define the reco partitions
-  reco_cuts:
+  reco_partitions:
     kaon_like      : "DLLK>0.0 & (DLLK-DLLp)>0.0 & (DLLK-DLLe)>0.0"
     pion_like      : "DLLK<0.0 & DLLp<0.0 & DLLe<0.0"
     proton_like    : "DLLp>0.0 & (DLLp-DLLK)>0.0 & (DLLp-DLLe)>0.0"
@@ -68,7 +66,7 @@ pid:
     key: None
     tree: "DecayTree"
     # PID-less selection mimicking the hadron-enriched data selection -- PID excluded to be able to extract all necessary PID efficiencies 
-    hadron_enriched_def_sel: "( B_plus_L0Global_TIS ) & \
+    hadron_enriched_sel: "( B_plus_L0Global_TIS ) & \
       ( ( (B_plus_Hlt1TwoTrackMVADecision_TOS) | (B_plus_Hlt1TrackMuonMVADecision_TOS) | (B_plus_Hlt1TrackMVADecision_TOS) | (B_plus_Hlt1TrackMuonDecision_TOS) ) | (B_plus_Hlt1TrackAllL0Decision_TOS ) ) &\
       ( ( (B_plus_Hlt2Topo2BodyDecision_TOS) | (B_plus_Hlt2Topo3BodyDecision_TOS) | (B_plus_Hlt2Topo4BodyDecision_TOS) | (B_plus_Hlt2TopoMu2BodyDecision_TOS) | (B_plus_Hlt2TopoMu3BodyDecision_TOS) | (B_plus_Hlt2TopoMu4BodyDecision_TOS) ) | ( (B_plus_Hlt2Topo2BodyBBDTDecision_TOS) | (B_plus_Hlt2Topo3BodyBBDTDecision_TOS) | (B_plus_Hlt2Topo4BodyBBDTDecision_TOS) | (B_plus_Hlt2TopoMu2BodyBBDTDecision_TOS) | (B_plus_Hlt2TopoMu3BodyBBDTDecision_TOS) | (B_plus_Hlt2TopoMu4BodyBBDTDecision_TOS) ) | ( (B_plus_Hlt2SingleMuonDecision_TOS) ) ) & \
       ( (K_minus_PIDK>3) & (Pi_1_PIDK<0) ) & \
@@ -87,7 +85,7 @@ pid:
 # =============================================================================================================================
 data: 
   input_path: "/work/submit/blaised/DDmisID/fakemuon_2018_MU.root" # path to hadron-enriched data file (pid + intermediate selection applied)
-  output_path: "/work/submit/blaised/DDmisID/misid_w/fakemuon_2018_MU.root" # path to hadron-enriched data file (pid + intermediate selection applied)
+  outputt_path: "/work/submit/blaised/DDmisID/misid_w/fakemuon_2018_MU.root" # path to hadron-enriched data file (pid + intermediate selection applied)
 
   # prefix for muon branches in the data tuples
   data_prefixes: # NOTE: keys must match binning variable names

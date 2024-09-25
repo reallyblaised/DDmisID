@@ -26,6 +26,7 @@ setup(
         "uncertainties",
         "cabinetry",
         "polars",
+        "pydantic",
     ],
     entry_points="""
         [console_scripts]

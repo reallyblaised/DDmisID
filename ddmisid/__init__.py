@@ -14,9 +14,7 @@ from .utils.plot import (
     make_legend,
     save_to,
 )
-from .engine import build_schema, run_workflow
 from .auth import kinit
-from .snakemake_wrapper import run_snakemake
-
+from .engine import config
 
 _pid_eff_tolerance = 0.1
