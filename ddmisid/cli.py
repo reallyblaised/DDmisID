@@ -70,56 +70,29 @@ def build(config_path):  # This is the corresponding Python variable for the opt
 
 
 @cli.command()
-@click.argument("snakemake_args", nargs=-1)
+@click.argument("snakemake_args", nargs=-1, type=click.UNPROCESSED)
 def run(snakemake_args):
     """Run the Snakemake backend pipeline with dynamic flags.
 
     This command passes any Snakemake flag to the workflow.
 
     Example:
-        ddmisid-engine run --cores=4 --dry-run
+        ddmisid-engine run --cores 4 --dry-run
     """
+    # initialise kerberos ticket to access EOS
     config = get_config()
-    if config is None:  # Ensure config is loaded correctly
-        logger.error(
-            "Config not set. Please build the DDmisID engine first [`ddmisid-engine build`]."
-        )
+    if config is None:
+        logger.error("Config not set. Please build the DDmisID engine first.")
         return
-    kinit(config.user_id)  # initialise kerberos ticket
+    kinit(config.user_id)
     logger.info(f"Running the Snakemake pipeline with arguments: {snakemake_args}")
-
-    kwargs = parse_snakemake_args(snakemake_args)
-
-    # Pass the keyword arguments to _run_snakemake
+    # run the backend snakemake pipeline
     try:
-        _run_snakemake(**kwargs)
-        logger.info(
-            f"Snakemake pipeline ran successfully with arguments: {snakemake_args}"
-        )
+        _run_snakemake(snakemake_args)
     except Exception as e:
         logger.error(f"Snakemake execution failed: {e}")
-
-
-def parse_snakemake_args(snakemake_args):
-    """Parse Snakemake CLI arguments into keyword arguments."""
-    kwargs = {}
-    i = 0
-    while i < len(snakemake_args):
-        arg = snakemake_args[i]
-        if "=" in arg:
-            key, value = arg.split(" ", 1)
-            kwargs[key] = value
-        elif (
-            arg.startswith("--")
-            and i + 1 < len(snakemake_args)
-            and not snakemake_args[i + 1].startswith("--")
-        ):
-            kwargs[arg] = snakemake_args[i + 1]
-            i += 1
-        else:
-            kwargs[arg] = True
-        i += 1
-    return kwargs
+    else:
+        logger.info("Success: DDmisID engine run complete.")
 
 
 if __name__ == "__main__":

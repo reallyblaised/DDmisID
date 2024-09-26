@@ -51,7 +51,7 @@ pip install -e .
 
 DDmisID runs through an engine that 
   1. Builds and validates a user-specified configuration YAML file [by default `config/main.yml`].
-  2. Orchestrates the DDmisID pipeline, powered by a Snakemake backend.
+  2. Orchestrates the DDmisID pipeline, powered by a [Snakemake](https://snakemake.readthedocs.io/en/stable/#) backend.
 
 ### Instructions
 1. #### Edit YAML main configuration file
@@ -76,8 +76,13 @@ to verify that the configuration report is compatible with the user's directives
 4. #### Run the DDmisID engine
 Execute the pipeline, passing Snakemake’s dynamic flags as needed, for example:
 ```bash
-ddmisid-engine run --cores=4 --dry-run
+ddmisid-engine run -- <snakemake options>
 ```
+for example,
+```
+ddmisid-engine run -- --dryrun --cores 1
+```
+where, as a tip, `--cores all` can be used to exploit all the resources available on your machine or cluster.
 
 ## License
 

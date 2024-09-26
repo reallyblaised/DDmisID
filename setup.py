@@ -27,6 +27,7 @@ setup(
         "cabinetry",
         "polars",
         "pydantic",
+        "snakemake",
     ],
     entry_points="""
         [console_scripts]
