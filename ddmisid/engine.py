@@ -2,12 +2,12 @@
 
 from pydantic import ValidationError  # Correct the typo
 from .pydantic_config_model import DDmisIDConfig
-from ddmisid import read_config  # Assuming this is the correct path
 import subprocess
 from loguru import logger
 from tabulate import tabulate
 from pathlib import Path
 import json
+from ddmisid import read_config
 
 # Global variable to store the validated config
 config = None

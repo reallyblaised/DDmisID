@@ -63,7 +63,7 @@ pid:
     # define `ghost-like` the partition evading all the above, in a slight abuse of notation
     ghost_like: "((DLLK < 0) | (DLLK == 0) | (DLLK - DLLp < 0) | (DLLK - DLLp == 0) | (DLLK - DLLe < 0) | (DLLK - DLLe == 0)) & ((DLLK > 0) | (DLLK == 0) | (DLLp > 0) | (DLLp == 0) | (DLLe > 0) | (DLLe == 0)) & ((DLLp < 0) | (DLLp == 0) | (DLLp - DLLK < 0) | (DLLp - DLLK == 0) | (DLLp - DLLe < 0) | (DLLp - DLLe == 0)) & ((DLLe < 0) | (DLLe == 0) | (DLLe - DLLK < 0) | (DLLe - DLLK == 0) | (DLLe - DLLp < 0) | (DLLe - DLLp == 0))"
 
-  # ghosts section
+  # ghosts section [optional, but nessary if `ghost-like` if not None]
   # --------------
   ghost_config: 
     path: "root://eoslhcb.cern.ch//eos/lhcb/wg/semileptonic/Bc2D0MuNuX/ntuples/v4/MC/D0MuNu/2018/MU/MC_Bc2D0MuNu_2018_MU_pidgen.root"

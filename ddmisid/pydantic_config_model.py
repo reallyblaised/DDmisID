@@ -35,7 +35,7 @@ class PIDConfig(BaseModel):
         ...,
         description="DLL and ProbNN cuts defining the reco partitions within the control region",
     )
-    ghost_config: Dict[str, str] = Field(
+    ghost_config: Optional[Dict[str, str]] = Field(
         ..., description="Configuration for the ghost candidates"
     )
 
@@ -49,9 +49,11 @@ class PIDConfig(BaseModel):
             )
         return value
 
-    # full ghost MC spec
-    @validator("ghost_config")
+    # full ghost MC spec validation, if provided [Optional]
+    @validator("ghost_config", always=True)
     def validate_ghost_config(cls, value):
+        if value is None:
+            return value  # No validation needed if ghost_config is None
         required_keys = {"path", "key", "tree", "hadron_enriched_sel", "branch_prefix"}
         missing_keys = required_keys - value.keys()
         if missing_keys:
