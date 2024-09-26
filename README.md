@@ -66,7 +66,7 @@ or, for custom config-file locations:
 ```bash 
 $ ddmisid-engine build --config-path=<custom_YAML_config_path>
 ```
-3. ### Verify the engine spec has been built $ correctly
+3. #### Verify the engine spec has been built $ correctly
 Run 
 ```bash
 $ python -c "from ddmisid.engine import config; print(config)"
