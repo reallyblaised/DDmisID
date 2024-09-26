@@ -1,12 +1,13 @@
 """Command-line interface to build the DDmisID engine"""
 
 import click
-from .engine import _run_snakemake, _load_config, config
+from .engine import _run_snakemake, _load_config, get_config
 from ddmisid.auth import kinit
 from pydantic import ValidationError
 from loguru import logger
 from pathlib import Path
 from .pydantic_config_model import DDmisIDConfig  # Import the model for validation
+from tabulate import tabulate
 
 # Setup logging
 logdir = Path("logs/engine")
@@ -44,25 +45,23 @@ def build(config_path):  # This is the corresponding Python variable for the opt
     # Load and validate the configuration
     try:
         _load_config(config_path)  # Pass config_path to _load_config
+        config = get_config()  # retrive updated global config
+        if config is None:  # Ensure config is loaded correctly
+            logger.error("Config not set. Please ensure the configuration is valid.")
+            return
         logger.info(f"DDmisID engine built successfully from: {config_path}")
 
         # Tabulate the configuration for a cleaner display
         config_dict = config.dict()  # Convert to a dictionary
         table_data = []
 
-        # Flatten and format the dictionary into a table-friendly structure
-        for section, subsection in config_dict.items():
-            if isinstance(subsection, dict):  # Handle nested dicts
-                for key, value in subsection.items():
-                    table_data.append([f"{section}.{key}", value])
-            else:
-                table_data.append([section, subsection])
-
-        # Print the table
-        table_report = tabulate(
-            table_data, headers=["Config Key", "Value"], tablefmt="grid"
+        # Print a detailed report of the full configuration
+        config_report = config.json(
+            indent=4
+        )  # Or .dict() if you prefer dictionary format
+        logger.info(
+            f"\n\nConfiguration report:\n---------------------\n{config_report}"
         )
-        click.echo(table_report)
 
     except ValidationError as e:
         logger.error(f"Validation failed for configuration: {e}")

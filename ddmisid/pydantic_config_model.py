@@ -35,7 +35,7 @@ class PIDConfig(BaseModel):
         ...,
         description="DLL and ProbNN cuts defining the reco partitions within the control region",
     )
-    ghost_config: Dict[str, Optional[str]] = Field(
+    ghost_config: Dict[str, str] = Field(
         ..., description="Configuration for the ghost candidates"
     )
 

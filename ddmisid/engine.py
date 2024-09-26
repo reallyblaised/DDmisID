@@ -5,16 +5,46 @@ from .pydantic_config_model import DDmisIDConfig
 from ddmisid import read_config  # Assuming this is the correct path
 import subprocess
 from loguru import logger
+from tabulate import tabulate
+from pathlib import Path
+import json
 
 # Global variable to store the validated config
 config = None
+config_path_json = Path(
+    ".ddmisid/validated_config.json"
+)  # Hidden directory for the validated config
 
 
 def _load_config(config_path: str):
     """Load and validate the configuration file."""
     global config
     config_data = read_config(config_path)
-    config = DDmisIDConfig(**config_data)  # Validate the config with Pydantic
+    config = DDmisIDConfig(**config_data)
+
+    # Persist the validated config to a hidden directory
+    config_path_json.parent.mkdir(exist_ok=True)
+    with config_path_json.open("w") as f:
+        f.write(config.json(indent=4))
+
+
+def get_config():
+    """Return the current value of the config."""
+    return config
+
+
+def _load_validated_config():
+    """Load the pre-validated configuration from the JSON file."""
+    global config
+    if not config_path_json.exists():
+        logger.error(f"Run 'ddmisid-engine build' first.")
+        raise FileNotFoundError(
+            f"Config build missing. Run 'ddmisid-engine build' first."
+        )
+
+    with config_path_json.open("r") as f:
+        config_data = json.load(f)
+        config = DDmisIDConfig(**config_data)
 
 
 def _run_snakemake(**kwargs):

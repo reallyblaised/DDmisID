@@ -49,12 +49,32 @@ pip install -e .
 
 ## Running DDmisID
 
-1. Edit YAML main configuration file, `config/main.yml`.
-2. Build the DDmisID engine, parding the YAML configuration file, 
-```bash 
-dmisid-engine build --config config/main.yml
+DDmisID runs through an engine that 
+  1. Builds and validates a user-specified configuration YAML file [by default `config/main.yml`].
+  2. Orchestrates the DDmisID pipeline, powered by a Snakemake backend.
+
+### Instructions
+1. #### Edit YAML main configuration file
+Open and modify `config/main.yml` (or a custom path to a YAML file with the same key structure), following the in-inline field descriptios.
+
+2. #### Build the DDmisID engine
+Parse the YAML configuration file and ensure it complies with the DDmisID engine specification:
+```bash
+$ dmisid-engine build # sources config/main.yml by default
 ```
-3. Run the DDmisID engine powered by a Snakemake backend with your specified options, _e.g._:
+or, for custom config-file locations: 
+```bash 
+$ dmisid-engine build --config-path=<custom_YAML_config_path>
+```
+3. ### Verify the engine spec has been built $ correctly
+Run 
+```bash
+$ python -c "from ddmisid.engine import config; print(config)"
+```
+to verify that the configuration report is compatible with the user's directives.
+
+4. #### Run the DDmisID engine
+Execute the pipeline, passing Snakemake’s dynamic flags as needed, for example:
 ```bash
 ddmisid-engine run --cores=4 --dry-run
 ```
