@@ -1,7 +1,7 @@
 """Command-line interface to build the DDmisID engine"""
 
 import click
-from .engine import _run_snakemake, _load_config, get_config
+from .engine import _run_snakemake, _load_config, get_config, _load_validated_config
 from ddmisid.auth import kinit
 from pydantic import ValidationError
 from loguru import logger
@@ -79,6 +79,13 @@ def run(snakemake_args):
     Example:
         ddmisid-engine run --cores=4 --dry-run
     """
+    config = get_config()
+    if config is None:  # Ensure config is loaded correctly
+        logger.error(
+            "Config not set. Please build the DDmisID engine first [`ddmisid-engine build`]."
+        )
+        return
+    kinit(config.user_id)  # initialise kerberos ticket
     logger.info(f"Running the Snakemake pipeline with arguments: {snakemake_args}")
 
     kwargs = parse_snakemake_args(snakemake_args)
@@ -100,7 +107,7 @@ def parse_snakemake_args(snakemake_args):
     while i < len(snakemake_args):
         arg = snakemake_args[i]
         if "=" in arg:
-            key, value = arg.split("=", 1)
+            key, value = arg.split(" ", 1)
             kwargs[key] = value
         elif (
             arg.startswith("--")

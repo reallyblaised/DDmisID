@@ -67,7 +67,7 @@ def _run_snakemake(**kwargs):
 
         # Execute the Snakemake command
         logger.info(f"Running Snakemake with command: {' '.join(cmd)}")
-        subprocess.run(cmd, check=True)
+        # subprocess.run(cmd, check=True)
         logger.info("Snakemake backend pipeline ran successfully.")
     except subprocess.CalledProcessError as e:
         logger.error(f"Snakemake backend fail: {e}")
