@@ -60,11 +60,11 @@ Open and modify `config/main.yml` (or a custom path to a YAML file with the same
 2. #### Build the DDmisID engine
 Parse the YAML configuration file and ensure it complies with the DDmisID engine specification:
 ```bash
-$ dmisid-engine build # sources config/main.yml by default
+$ ddmisid-engine build # sources config/main.yml by default
 ```
 or, for custom config-file locations: 
 ```bash 
-$ dmisid-engine build --config-path=<custom_YAML_config_path>
+$ ddmisid-engine build --config-path=<custom_YAML_config_path>
 ```
 3. ### Verify the engine spec has been built $ correctly
 Run 
