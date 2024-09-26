@@ -2,6 +2,7 @@
 
 import subprocess
 import getpass
+from loguru import logger
 
 
 def kinit(username: str) -> None:
@@ -10,23 +11,41 @@ def kinit(username: str) -> None:
     if not username.endswith("@CERN.CH"):
         username = f"{username}@CERN.CH"
 
-    # Prompt for the password securely
-    password = getpass.getpass(prompt=f"Enter password for {username}: ")
-
-    try:
-        # Use subprocess to run kinit and pass the password via stdin
-        process = subprocess.Popen(
-            ["kinit", username],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+    # Allow up to three authentication attempts
+    attempts = 0
+    while attempts < 3:
+        # Prompt for the password securely
+        password = getpass.getpass(
+            prompt=f"Initialising Kerberos ticket. Please enter password for {username} (Attempt {attempts + 1}/3): "
         )
-        stdout, stderr = process.communicate(
-            input=password.encode()
-        )  # Send password to kinit
-        if process.returncode == 0:
-            print(f"Successfully authenticated as {username}.")
-        else:
-            print(f"Authentication failed: {stderr.decode()}")
-    except Exception as e:
-        print(f"Error during kinit: {e}")
+
+        try:
+            # Use subprocess to run kinit and pass the password via stdin
+            process = subprocess.Popen(
+                ["kinit", "-r", "7d", username],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            stdout, stderr = process.communicate(
+                input=password.encode()
+            )  # Send password to kinit
+
+            # Check if kinit was successful
+            if process.returncode == 0:
+                logger.info(
+                    f"Authentication successful. Kerberos ticket initialised for user ID {username}."
+                )
+                return  # Exit function on success
+            else:
+                attempts += 1
+                logger.error(f"Authentication failed: {stderr.decode().strip()}")
+
+        except Exception as e:
+            logger.error(f"Error during kinit: {e}")
+            attempts += 1
+
+    # If all attempts fail, raise an exception
+    raise RuntimeError(
+        f"Failed to authenticate after 3 attempts for user ID {username}."
+    )
