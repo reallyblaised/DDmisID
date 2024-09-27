@@ -4,7 +4,7 @@ This script generates a bash file which is mostly a wrapper for pidcalib2,
 generated from the user-defined config file.
 """
 
-from ddmisid import BinningGenerator
+from ddmisid.utils.binning import BinningGenerator, 
 from ddmisid.utils import read_config, debug, timing
 from data.aliases import CalibSamples, MCTunings, BinningVars, CommonCuts
 from termcolor2 import c as tc
@@ -18,7 +18,6 @@ from typing_extensions import ParamSpec
 T = TypeVar("T")
 P = ParamSpec("P")
 
-MAX_CALIB_FILES = read_config("config/main.yml", key="max_calib_files")
 
 
 def check_mu_region(

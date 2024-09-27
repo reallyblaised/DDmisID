@@ -4,3 +4,4 @@ from .io import (
     simple_load,
     load_hist,
 )
+from .binning import PIDCalibAliasFactory, DefaultBinningGenerator
