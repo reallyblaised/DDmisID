@@ -11,27 +11,31 @@ class PIDCalibAliasFactory:
     """Factory to process variable names based on year and species."""
 
     @staticmethod
-    def process_variable(var: str, year: str, spc: str) -> str:
+    def process_variable(var: str, year: str, spc: str | None = None) -> str:
         """
         Apply year-based processing to variable names.
         Source: https://twiki.cern.ch/twiki/bin/view/LHCb/PIDCalibPackage
         """
         # Run 1 vs Run 2 aliases
-        if year in ["2016", "2017", "2018"]:
-            if var in ["P", "PT"]:
-                var = f"Brunel_{var}"
-            elif var == "nTracks":
-                var = f"{var}_Brunel"
-        elif year not in ["2011", "2012", "2015"]:
-            raise ValueError(f"Year {year} not recognized.")
-
-        # bespoke handling of electrons
-        if spc == "e_B_Jpsi" and year == "2016":
-            if var in ["Brunel_P", "Brunel_PT"]:
-                var = var.replace("Brunel_", "")
-            elif var == "nTracks_Brunel":
-                var = var.replace("_Brunel", "")
-
+        match var:
+            case var if var in ["P", "PT", "ETA"]:
+                if year in ["2016", "2017", "2018"]:
+                    var = f"Brunel_{var}"
+                elif year in ["2011", "2012", "2015"]:
+                    pass
+                else:
+                    raise ValueError(f"Year {year} not supported for {var} assignment.")
+            
+            case var if var == "nTracks":
+                if year in ["2016", "2017", "2018"]:
+                    var = f"{var}_Brunel"
+                elif year in ["2011", "2012", "2015"]:
+                    pass
+                else:
+                    raise ValueError(f"Year {year} not supported for {var} assignment.")
+            
+            case _:
+                raise ValueError(f"Variable {var} not supported (yet). If appropriate, please add to the `PIDCalibAliasFactory` in ddmisid/utils/binning.py.")
         return var
 
 
@@ -63,7 +67,7 @@ class DefaultBinningGenerator(BinningGeneratorBase):
 
     def build(self, year: str, outdir: str = ".data", verbose: bool = True) -> None:
         """Build the JSON spec file for the supplied years and species."""
-        bins, species = self.fetch_info()
+        species, bins = self.fetch_info()
 
         for spc in species.values():
             binning2json = {spc: {}}
@@ -82,6 +86,7 @@ class DefaultBinningGenerator(BinningGeneratorBase):
                 )
             else:
                 outfile_path = Path(f"{outdir}/binning_{year}/{spc}.json")
+
             outfile_path.parent.mkdir(parents=True, exist_ok=True)
             with open(outfile_path, "w") as f:
                 json.dump(binning2json, f, indent=4)

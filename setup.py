@@ -27,7 +27,8 @@ setup(
         "cabinetry",
         "polars",
         "pydantic",
-        "snakemake",
+        "pytest",
+        # "snakemake", # recommended install via mamba and running `pip install -e .` after loading mamba environment
     ],
     entry_points="""
         [console_scripts]
