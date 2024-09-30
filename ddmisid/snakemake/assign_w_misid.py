@@ -288,11 +288,11 @@ if __name__ == "__main__":
     ).lazy()
 
     # compute misID weights and store into new branch `misid_w`
-    data_update = data.with_columns(
-        pl.struct(["Mu_plus_P", "Mu_plus_LK_ETA", "nTracks"])
-        .map_elements(
+    data_updat
             lambda x: misid_w_hist[
-                bh.loc(x["Mu_plus_P"]),
+                bh.loc(x["Mu_plus_P"])e = data.with_columns(
+        pl.struct(["Mu_plus_P", "Mu_plus_LK_ETA", "nTracks"])
+        .map_elements(,
                 bh.loc(x["Mu_plus_LK_ETA"]),
                 bh.loc(x["nTracks"]),
             ].value,

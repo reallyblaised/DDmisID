@@ -4,9 +4,9 @@ This script generates a bash file which is mostly a wrapper for pidcalib2,
 generated from the user-defined config file.
 """
 
-from ddmisid.utils.binning import BinningGenerator, 
+from ddmisid.utils.binning import BinningGenerato
 from ddmisid.utils import read_config, debug, timing
-from data.aliases import CalibSamples, MCTunings, BinningVars, CommonCuts
+from data.aliases import CalibSamples, MCTunings, 
 from termcolor2 import c as tc
 from pathlib import Path
 import argparse
@@ -17,7 +17,6 @@ from typing_extensions import ParamSpec
 
 T = TypeVar("T")
 P = ParamSpec("P")
-
 
 
 def check_mu_region(
