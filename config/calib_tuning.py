@@ -80,13 +80,16 @@ class CalibSamples(YearMixin):
         self.validate_year(year)
 
         # validate the species
-        if species not in ["hadron", "e"]:
-            raise ValueError(
-                f"Species {species} not recognised. Allowed values are {['hadron', 'e']}."
-            )
+        match species:
+            case "hadron" | "pion" | "kaon" | "proton":
+                calib_sample_key = f"hadron_{year}"
+            case "e" | "electron":
+                calib_sample_key = f"e_{year}"
+            case _:
+                raise ValueError(f"Invalid species {species} provided.")
 
         # dynamically fetch the calibration sample as per the query parameters
-        return getattr(self, f"{species}_{year}")
+        return getattr(self, calib_sample_key)
 
 
 @dataclass(frozen=True)
