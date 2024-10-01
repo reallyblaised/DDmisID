@@ -69,3 +69,19 @@ def test_binning_build(setup_binning):
         binning = json.load(f)
 
     assert binning == expected_binning
+
+
+def test_binning_variable_compliance(setup_binning):
+    """Ensure the binning variables comply with the PIDCalib2 calibration-sample guidelines."""
+    # run 2 aliases
+    binvars = setup_binning.get_binning_variables(year="2016")
+    assert binvars == [
+        "Brunel_P",
+        "Brunel_PT",
+        "Brunel_ETA",
+        "nTracks_Brunel",
+    ]
+
+    # run 1 aliases
+    binvars = setup_binning.get_binning_variables(year="2012")
+    assert binvars == ["P", "PT", "ETA", "nTracks"]

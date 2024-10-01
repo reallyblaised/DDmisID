@@ -52,7 +52,6 @@ class CalibSamples(YearMixin):
     e_2012: str = "21"
     e_2011: str = "21r1"
 
-    # validation
     def fetch(self, year: str, species: str) -> str:
         """
         Fetch the appropriate calibration sample based on the year and particle type (hadron or electron).

@@ -8,15 +8,15 @@ def test_calibration_samples():
 
     # hadrons
     assert calib_samples.fetch("2018", "hadron") == "Turbo18"
-    assert calib_samples.fetch("2017", "hadron") == "Turbo17"
+    assert calib_samples.fetch("2017", "proton") == "Turbo17"
     assert calib_samples.fetch("2016", "hadron") == "Turbo16"
-    assert calib_samples.fetch("2015", "hadron") == "Turbo15"
+    assert calib_samples.fetch("2015", "pion") == "Turbo15"
     assert calib_samples.fetch("2012", "hadron") == "21"
-    assert calib_samples.fetch("2011", "hadron") == "21r1"
+    assert calib_samples.fetch("2011", "kaon") == "21r1"
 
     # electrons
     assert calib_samples.fetch("2018", "e") == "Electron18"
-    assert calib_samples.fetch("2017", "e") == "Electron17"
+    assert calib_samples.fetch("2017", "electron") == "Electron17"
     assert calib_samples.fetch("2016", "e") == "Electron16"
     assert calib_samples.fetch("2015", "e") == "Electron15"
     assert calib_samples.fetch("2012", "e") == "21"
