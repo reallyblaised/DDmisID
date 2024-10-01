@@ -42,17 +42,20 @@ pid:
   magpols : ["up"] # follow pidcalib2 syntax
   
   # PIDCALIB section: adopt pidcalib syntax to extract efficiencies from calibration data
-  # -------------------------------------------------------------------------------------
-  # muno-specific PID selection to isolate the single-track hadron-enriched data 
-  control_pid_sel: "_ProbNNghost<0.1 & DLLmu<0.0 & IsMuon==0.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2
+  # =====================================================================================
+  
+  # SELECTIONS [use pidcalib2 syntax]
+  # ---------------------------------
+  # muon-specific PID selection to isolate the single-track hadron-enriched data 
+  control: "_ProbNNghost<0.1 & DLLmu<0.0 & IsMuon==0.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2
 
   # muon-specific PID selection in the signal-fit region  
-  target_pid_sel: "_ProbNNghost<0.1 & DLLmu>3.0 & IsMuon==1.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2 
+  target: "_ProbNNghost<0.1 & DLLmu>3.0 & IsMuon==1.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2 
 
   # selection shared between the hadron-enriched and signal samples. 
   # usually involving acceptance cuts, and the extrema of the mommentum range established in nominal events selection
   # for run 2 stripping vs turbo analyses, the `Brunel_` prefix might be required - see: https://twiki.cern.ch/twiki/bin/view/LHCb/PIDCalibPackage
-  common_sel: "probe_Brunel_NShared==0 & Brunel_P>10000 & Brunel_P<100000 & Brunel_PT>1500" # NOTE: ensure the extrema are compatible with the binning json files
+  common_selection: "probe_Brunel_NShared==0 & Brunel_P>10000 & Brunel_P<100000 & Brunel_PT>1500" # NOTE: ensure the extrema are compatible with the binning json files
 
   # pidcalib cuts of HE sample to define the reco partitions
   reco_partitions:
@@ -88,19 +91,22 @@ pid:
 # DATA section: cuts applied to the hadron enriched *data*: the syntax must reflect the branch names in the user-defined ntuple
 # =============================================================================================================================
 data: 
+  # file/directory/tree coordinates
+  # ------------------------------ 
   input_path: "/work/submit/blaised/DDmisID/fakemuon_2018_MU.root" # path to hadron-enriched data file (pid + intermediate selection applied)
   data_key: "B2DMuNuX_D02KPi_FakeMuonTuple"
   data_tree: "DecayTree"
   output_path: "/work/submit/blaised/DDmisID/misid_w/fakemuon_2018_MU.root" # path to hadron-enriched data file (pid + intermediate selection applied)
 
-  # prefix for muon branches in the data tuples
+  # prefix for the bespoke single-track branches in the input ROOT file
+  # -------------------------------------------------------------------
   data_prefixes: # NOTE: keys must match binning variable names
     P: "Mu_plus" # to signal that branches follow the naming convention Mu_plus_{P, PT, ETA...}
     ETA: "Mu_plus_LK"
     nTracks: ""
 
-
   # NOTE: follow awkward syntax: each selection cut enclosed by a set of brackets
+  # -----------------------------------------------------------------------------
   data_reco_partitions: 
     kaon      : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0.0) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDK>0.0) & ( (Mu_plus_PIDK-Mu_plus_PIDp)>0.0 ) & ( (Mu_plus_PIDK-Mu_plus_PIDe)>0.0 )"
     pion      : "(Mu_plus_InMuonAcc==1.0) & (Mu_plus_NShared==0) & (Mu_plus_P>10000) & (Mu_plus_P<100000) & (Mu_plus_PT>1500) & (Mu_plus_PIDmu<0.0) & (Mu_plus_isMuon==0) & (Mu_plus_hasMuon==1.0) & (Mu_plus_ProbNNghost<0.1) & (Mu_plus_PIDK<0.0) & (Mu_plus_PIDp<0.0) & (Mu_plus_PIDe<0.0)"

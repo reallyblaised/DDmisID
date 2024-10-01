@@ -2,8 +2,6 @@
 
 from pydantic import BaseModel, Field, validator
 from typing import List, Dict, Optional
-
-
 from pydantic import BaseModel, Field, validator
 from typing import List, Dict, Optional
 
@@ -25,9 +23,9 @@ class PIDConfig(BaseModel):
     )
     years: List[str] = Field(..., description="Data-taking years")
     magpols: List[str] = Field(..., description="Magnet polarities")
-    control_pid_sel: str = Field(..., description="PID selection for control region")
-    target_pid_sel: str = Field(..., description="PID selection for target region")
-    common_sel: Optional[str] = Field(
+    control: str = Field(..., description="PID selection for control region")
+    target: str = Field(..., description="PID selection for target region")
+    common_selection: Optional[str] = Field(
         None,
         description="Common cuts between the control and target region (e.g., InMuonAcc==1.0)",
     )
