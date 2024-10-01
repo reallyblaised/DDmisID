@@ -1,13 +1,10 @@
-"""Generate PIDCalib jobs for the DDmisID project.
-
-This script generates a bash file which is mostly a wrapper for pidcalib2, 
-generated from the user-defined config file.
+"""
+Generate PIDCalib jobs for the DDmisID project.
 """
 
-from ddmisid.utils.binning import BinningGenerato
+from ddmisid.utils.binning import DefaultBinningGenerator
 from ddmisid.utils import read_config, debug, timing
-from data.aliases import CalibSamples, MCTunings, 
-from termcolor2 import c as tc
+from data.aliases import CalibSamples, MCTunings
 from pathlib import Path
 import argparse
 import os
