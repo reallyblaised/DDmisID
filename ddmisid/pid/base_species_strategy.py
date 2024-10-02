@@ -25,14 +25,6 @@ class SpeciesValidatorMixin:
 class SpeciesStrategyBase(ABC):
     """Abstract base class for species strategies."""
 
-    def __init__(self, config):
-        self._species_alias_map = config.pid.species
-
-    @property
-    def species_alias_map(self):
-        """Return the map of species aliases from the configuration."""
-        return self._species_alias_map
-
     @abstractmethod
     def get_species_name(self) -> str:
         """
@@ -57,14 +49,19 @@ class ParticleStrategy(SpeciesStrategyBase, SpeciesValidatorMixin):
     """
 
     def __init__(self, config, species):
-        super().__init__(config)
         self._species = species
+        self._species_alias_map = config.pid.species  # only relevent to particles
         self.validate_species()
 
     @property
     def species(self):
         """Return the species specified."""
         return self._species
+
+    @property
+    def species_alias_map(self):
+        """Return the map of species aliases from the configuration."""
+        return self._species_alias_map
 
     def get_species_name(self) -> str:
         """Return the DDmisID internal species identifier."""
