@@ -125,7 +125,7 @@ class DefaultBinningGenerator(BinningGeneratorBase):
                 binning_json[spc][processed_var] = edges
 
             # Create the output file path
-            output_file = self._generate_output_filepath(spc, year, outdir)
+            output_file = self.generate_output_filepath(spc, year, outdir)
 
             # Write the binning data to the JSON file
             output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -135,7 +135,7 @@ class DefaultBinningGenerator(BinningGeneratorBase):
             if verbose:
                 print(f"Binning file for {spc} written to {output_file}")
 
-    def _generate_output_filepath(self, species: str, year: str, outdir: str) -> Path:
+    def generate_output_filepath(self, species: str, year: str, outdir: str) -> Path:
         """
         Generate the file path for the binning JSON file.
 
