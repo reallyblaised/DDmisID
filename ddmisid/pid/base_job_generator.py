@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from ddmisid.engine import config
 
 
-class BaseJobCreator(ABC):
+class BaseJobGenerator(ABC):
     """Abstract base class for PID-efficiency job creation, accounting ofr particle-species strategy, magpol, year, and PID region."""
 
     def __init__(self, config):

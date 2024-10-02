@@ -1,6 +1,6 @@
 """Species-specific strategies for PID-efficency extraction jobs."""
 
-from base_species_strategy import BaseSpeciesStrategy, ParticleStrategy
+from ddmisid.pid.base_species_strategy import BaseSpeciesStrategy, ParticleStrategy
 from ddmisid.engine import config
 
 

@@ -4,15 +4,15 @@ and a bespoke MC-based protocol for ghost efficiencies.
 """
 
 from pathlib import Path
-from ddmisid.pidcalib.species_strategy import ParticleStrategy
-from ddmisid.pidcalib.base_job_creator import BaseJobCreator
+from ddmisid.pid.species_strategy import ParticleStrategy, GhostStrategy
+from ddmisid.pid.base_job_generator import BaseJobGenerator
 from loguru import logger
 import os
-from config.calib_tuning import CalibSamples, MCTuning
-from ddmisid.utils.binning import DefaultBinningGenerator, process_variable
+from config.calib_tuning import CalibSamples, MCTunings
+from ddmisid.utils.binning import DefaultBinningGenerator
 
 
-class ParticleJobCreator(BaseJobCreator):
+class ParticleJobGenerator(BaseJobGenerator):
     """
     Concrete implementation for generating PIDCalib2 jobs for particles.
     Inherits from the BaseJobCreator to access the relevant config parameters.
@@ -51,7 +51,7 @@ class ParticleJobCreator(BaseJobCreator):
 
         # Fetch external inputs: calibration sample and MCTuning version
         calib_sample = CalibSamples().fetch(year=year, species=species)
-        mc_tuning = MCTuning().fetch(year=year)  # Prefix for the ProbNNghost selection
+        mc_tuning = MCTunings().fetch(year=year)  # Prefix for the ProbNNghost selection
 
         # Iterate through control and target regions to dynamically create PIDCalib2 jobs
         for region in region_id:
@@ -152,3 +152,18 @@ class ParticleJobCreator(BaseJobCreator):
             f.write(job_conf)
 
         logger.info(f"Job script written to {script_path}")
+
+
+class GhostJobGenerator(BaseJobGenerator):
+    """
+    Concrete implementation for generating PIDCalib2 jobs for ghosts.
+    Inherits from the BaseJobCreator to access the relevant config parameters.
+    """
+
+    def __init__(self, config, strategy: GhostStrategy):
+        super().__init__(config)
+        self.strategy = strategy
+        self.max_calib_files = config.max_calib_files  # Picked up from the config
+
+    def generate_control_target_jobs(self):
+        pass

@@ -1,7 +1,7 @@
 """Factory interface to engage PIDCalib2 job generation depending on the species specified in the YAML configuration file."""
 
-from ddmisid.pidcalib.job_generator import ParticleJobGenerator, GhostJobGenerator
-from ddmisid.pidcalib.species_strategy import (
+from ddmisid.pid.job_generator import ParticleJobGenerator, GhostJobGenerator
+from ddmisid.pid.species_strategy import (
     KaonStrategy,
     PionStrategy,
     ProtonStrategy,
