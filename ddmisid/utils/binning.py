@@ -26,18 +26,40 @@ class PIDCalibAliasFactory:
         str
             The processed variable name based on the year.
         """
+        valid_years_run2 = ["2016", "2017", "2018"]
+        valid_years_run1 = ["2011", "2012", "2015"]
+
+        # Handle "P", "PT", and "ETA" cases
         if var in ["P", "PT", "ETA"]:
-            if year in ["2016", "2017", "2018"]:
+            if year in valid_years_run2:
                 return f"Brunel_{var}"
-            elif year in ["2011", "2012", "2015"]:
+            elif year in valid_years_run1:
                 return var
+
+        # Handle "nTracks" case
         elif var == "nTracks":
-            if year in ["2016", "2017", "2018"]:
+            if year in valid_years_run2:
                 return f"{var}_Brunel"
-            elif year in ["2011", "2012", "2015"]:
+            elif year in valid_years_run1:
                 return var
+
+        # Handle "Brunel_P", "Brunel_PT", "Brunel_ETA" and "nTracks_Brunel"
+        elif var.startswith("Brunel_"):
+            if year in valid_years_run2:
+                return var
+            elif year in valid_years_run1:
+                return var.replace("Brunel_", "")
+
+        elif var == "nTracks_Brunel":
+            if year in valid_years_run2:
+                return var
+            elif year in valid_years_run1:
+                return var.replace("_Brunel", "")
+
+        # If none of the conditions are met, raise an error
         else:
-            raise ValueError(f"Variable {var} not supported for year {year}.")
+            raise ValueError(f"Variable '{var}' not supported for year '{year}'.")
+
         return var
 
 
@@ -70,13 +92,14 @@ class DefaultBinningGenerator(BinningGeneratorBase):
         An optional alias for the binning file.
     """
 
-    species: Dict[str, str]
+    species: str
+    species_alias: str
     binning: Dict[str, Dict[str, List[float]]]
     binning_alias: Optional[str] = None
 
     def fetch_info(self) -> Tuple[Dict[str, str], Dict[str, Dict[str, List[float]]]]:
         """Fetch the user-defined binning information for the current configuration."""
-        return self.species, self.binning
+        return self.species, self.species_alias, self.binning
 
     def get_binning_variables(self, year: str) -> List[str]:
         """
@@ -114,26 +137,25 @@ class DefaultBinningGenerator(BinningGeneratorBase):
         -------
         None
         """
-        species, bins = self.fetch_info()
+        species, species_alias, bins = self.fetch_info()
 
-        for spc in species.values():
-            binning_json = {spc: {}}
+        binning_json = {species_alias: {}}
 
-            for var, edges in bins.items():
-                # Ensure correct PIDCalib2 variable-alias compatibility
-                processed_var = PIDCalibAliasFactory.process_variable(var, year)
-                binning_json[spc][processed_var] = edges
+        for var, edges in bins.items():
+            # Ensure correct PIDCalib2 variable-alias compatibility
+            processed_var = PIDCalibAliasFactory.process_variable(var, year)
+            binning_json[species_alias][processed_var] = edges  # pidcalib2 compliant
 
-            # Create the output file path
-            output_file = self.generate_output_filepath(spc, year, outdir)
+        # Create the output file path
+        output_file = self.generate_output_filepath(species, year, outdir)
 
-            # Write the binning data to the JSON file
-            output_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_file, "w") as f:
-                json.dump(binning_json, f, indent=4)
+        # Write the binning data to the JSON file
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_file, "w") as f:
+            json.dump(binning_json, f, indent=4)
 
-            if verbose:
-                print(f"Binning file for {spc} written to {output_file}")
+        if verbose:
+            print(f"Binning file for {species} written to {output_file}")
 
     def generate_output_filepath(self, species: str, year: str, outdir: str) -> Path:
         """

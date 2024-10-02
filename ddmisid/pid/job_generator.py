@@ -23,7 +23,7 @@ class ParticleJobGenerator(BaseJobGenerator):
         self.strategy = strategy
         self.max_calib_files = config.max_calib_files  # Picked up from the config
 
-    def generate_control_target_jobs(
+    def generate_jobs(
         self,
         year: str,
         magpol: str,
@@ -48,6 +48,7 @@ class ParticleJobGenerator(BaseJobGenerator):
             Directory where the output will be saved [by default set to `bin`].
         """
         species = self.strategy.get_species_name()  # e.g., "kaon", "pion", etc.
+        alias = self.strategy.get_species_alias()  # e.g., "K", "Pi", etc.
 
         # Fetch external inputs: calibration sample and MCTuning version
         calib_sample = CalibSamples().fetch(year=year, species=species)
@@ -68,13 +69,13 @@ class ParticleJobGenerator(BaseJobGenerator):
 
             # Set the appropriate PID cuts for each region
             pid_cut = (
-                f"{mc_tuning}{self.control_selection}"
+                f"{mc_tuning}{self.control_pid_selection}"
                 if region == "control"
-                else f"{mc_tuning}{self.target_selection}"
+                else f"{mc_tuning}{self.target_pid_selection}"
             )
 
             # Establish the binning coordinates
-            Binning = DefaultBinningGenerator(species, self.pid_extrap_binning)
+            Binning = DefaultBinningGenerator(species, alias, self.pid_extrap_binning)
             binning_vars = Binning.get_binning_variables(
                 year
             )  # List of binning variables

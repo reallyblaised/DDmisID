@@ -32,8 +32,8 @@ class PIDCalibJobFactory:
             logger.info(f"Generating PIDCalib2 jobs for species: {species_id}")
 
             # Fetch the appropriate strategy and job generator class for the species
-            strategy, generator_class = self._get_strategy_and_generator(species_id)
-            job_generator = generator_class(config, strategy)
+            strategy, generator_class = self._get_strategy_and_generator(species_id) 
+            job_generator = generator_class(config, strategy) # NOTE: max_calib_files set in the init directly from config
 
             # Dynamically generate the jobs, looping through the years and magnetic polarities
             for year in self.years:
@@ -45,12 +45,11 @@ class PIDCalibJobFactory:
                         region_id=region_ids,
                         output_dir=output_dir,
                         verbose=verbose,
-                        max_calib_files=self.max_calib_files  # Pass the correct max file limit
                     )
 
-    def _get_strategy_and_generator(self, species_id: str) -> tuple:
+    def _get_strategy_and_generator(self, species: str) -> tuple:
         """Fetch the appropriate strategy and generator class for the species."""
-        match species_id:
+        match species:
             case "pion": return PionStrategy(), ParticleJobGenerator
             case "proton": return ProtonStrategy(), ParticleJobGenerator
             case "kaon": return KaonStrategy(), ParticleJobGenerator

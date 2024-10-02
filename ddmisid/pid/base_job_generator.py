@@ -13,8 +13,8 @@ class BaseJobGenerator(ABC):
     def __init__(self, config):
         self._sweight_binning = config.pid.sweight_binning
         self._pid_extrap_binning = config.pid.pid_extrap_binning
-        self._control_selection = config.pid.control
-        self._target_selection = config.pid.target
+        self._control_pid_selection = config.pid.control
+        self._target_pid_selection = config.pid.target
         self._common_selection = config.pid.common_selection
         self._reco_partitions = config.pid.reco_partitions
 
@@ -27,12 +27,12 @@ class BaseJobGenerator(ABC):
         return self._pid_extrap_binning
 
     @property
-    def control_region(self):
-        return self._control_selection
+    def control_pid_selection(self):
+        return self._control_pid_selection
 
     @property
-    def target_region(self):
-        return self._target_selection
+    def target_pid_selection(self):
+        return self._target_pid_selection
 
     @property
     def common_selection(self):
@@ -50,6 +50,5 @@ class BaseJobGenerator(ABC):
         region_id: list,
         outdir_dir: str,
         verbose: bool,
-        test: bool,
     ) -> None:
         pass
