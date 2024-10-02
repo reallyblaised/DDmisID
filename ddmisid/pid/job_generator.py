@@ -12,88 +12,8 @@ from config.calib_tuning import CalibSamples, MCTunings
 from ddmisid.utils.binning import DefaultBinningGenerator
 
 
-class ParticleJobGenerator(BaseJobGenerator):
-    """
-    Concrete implementation for generating PIDCalib2 jobs for particles.
-    Inherits from the BaseJobCreator to access the relevant config parameters.
-    """
-
-    def __init__(self, config, strategy: ParticleStrategy):
-        super().__init__(config)
-        self.strategy = strategy
-        self.max_calib_files = config.max_calib_files  # Picked up from the config
-
-    def generate_jobs(
-        self,
-        year: str,
-        magpol: str,
-        region_id: list,  # PIDCalibJobFactory sets this by default to ["control", "target"]
-        verbose: bool,
-        output_dir: str = "bin",  # Indicating where bash files will be written to
-    ) -> None:
-        """
-        Generate the PIDCalib2 jobs for the given year, magnetic polarity, and regions.
-
-        Parameters
-        ----------
-        year : str
-            The year of data taking (e.g., "2018").
-        magpol : str
-            The magnetic polarity (allowed values are "up" and "down").
-        region_id : list
-            List of regions to apply (allowed values are "control" and "target").
-        verbose : bool
-            If True, include verbose output.
-        output_dir : str
-            Directory where the output will be saved [by default set to `bin`].
-        """
-        species = self.strategy.get_species_name()  # e.g., "kaon", "pion", etc.
-        alias = self.strategy.get_species_alias()  # e.g., "K", "Pi", etc.
-
-        # Fetch external inputs: calibration sample and MCTuning version
-        calib_sample = CalibSamples().fetch(year=year, species=species)
-        mc_tuning = MCTunings().fetch(year=year)  # Prefix for the ProbNNghost selection
-
-        # Iterate through control and target regions to dynamically create PIDCalib2 jobs
-        for region in region_id:
-
-            # Establish PIDCalib-specific alias for the species
-            species_pidcalib_alias = self.strategy.get_species_alias()
-
-            # Establish the path for the executable (run.sh)
-            namespace = f"{species}_to_{region}_like"
-            script_path = Path(
-                f"{output_dir}/{year}/{magpol}/{region}/{species}/{namespace}/run.sh"
-            )
-            script_path.parent.mkdir(parents=True, exist_ok=True)
-
-            # Set the appropriate PID cuts for each region
-            pid_cut = (
-                f"{mc_tuning}{self.control_pid_selection}"
-                if region == "control"
-                else f"{mc_tuning}{self.target_pid_selection}"
-            )
-
-            # Establish the binning coordinates
-            Binning = DefaultBinningGenerator(species, alias, self.pid_extrap_binning)
-            binning_vars = Binning.get_binning_variables(
-                year
-            )  # List of binning variables
-            binning_path = Binning.generate_output_filepath(
-                species, year, output_dir
-            )  # Path to binning JSON
-            Binning.build(year, output_dir, verbose)  # Write the binning JSON file
-
-            # Write the job executable
-            self._write_job_executable(
-                script_path,
-                calib_sample,
-                magpol,
-                species_pidcalib_alias,
-                pid_cut,
-                binning_vars,
-                binning_path,
-            )
+class JobWriterMixin:
+    """Mixin to write bash executables to extract PID efficiencies."""
 
     def _write_job_executable(
         self,
@@ -104,6 +24,8 @@ class ParticleJobGenerator(BaseJobGenerator):
         pid_cut: str,
         binning_vars: list,
         binning_path: Path,
+        common_selection: str,
+        max_calib_files: int,
     ) -> None:
         """
         Write the job executable (run.sh) for PIDCalib2.
@@ -130,7 +52,7 @@ class ParticleJobGenerator(BaseJobGenerator):
             f"source /cvmfs/lhcb.cern.ch/lib/LbEnv &&\n"
             f"lb-conda pidcalib pidcalib2.make_eff_hists --sample {calib_sample} "
             f"--magnet {magpol} --particle {species_pidcalib_alias} --pid-cut '{pid_cut}' "
-            f"--cut '{self.common_selection}' --binning-file {binning_path} --output-dir {script_path.parent}"
+            f"--cut '{common_selection}' --binning-file {binning_path} --output-dir {script_path.parent}"
         )
 
         # Add binning variables
@@ -139,7 +61,7 @@ class ParticleJobGenerator(BaseJobGenerator):
 
         # Apply the max file limit based on the config
         if self.max_calib_files > 0:
-            job_conf += f" --max-files {self.max_calib_files}"
+            job_conf += f" --max-files {max_calib_files}"
 
         # Final step: Touch a done file after completion
         job_conf += (
@@ -155,6 +77,182 @@ class ParticleJobGenerator(BaseJobGenerator):
         logger.info(f"Job script written to {script_path}")
 
 
+class ParticleJobGenerator(BaseJobGenerator, JobWriterMixin):
+    """
+    Concrete implementation for generating PIDCalib2 jobs for particles.
+    Inherits from the BaseJobCreator to access the relevant config parameters.
+    """
+
+    def __init__(self, config, strategy: ParticleStrategy):
+        super().__init__(config)
+        self.strategy = strategy
+        self._max_calib_files = config.max_calib_files  # Picked up from the config
+
+    @property
+    def max_calib_files(self):
+        return self._max_calib_files
+
+    def generate_jobs(
+        self,
+        year: str,
+        magpol: str,
+        region_id: list,  # PIDCalibJobFactory sets this by default to ["control", "target"]
+        verbose: bool,
+        output_dir: str = "bin",  # Indicating where bash files will be written to
+    ) -> None:
+        """
+        Generate the PIDCalib2 jobs for the given year, magnetic polarity, and regions.
+
+        Parameters
+        ----------
+        year : str
+            The year of data taking (e.g., "2018").
+        magpol : str
+            The magnetic polarity (allowed values are "up" and "down").
+        region_id : list
+            List of regions to apply (allowed values are "control" and "target").
+        verbose : bool
+            If True, include verbose output.
+        output_dir : str
+            Directory where the output will be saved [by default set to `bin`].
+        """
+        species = self.strategy.get_species_name()  # e.g., "kaon", "pion", etc.
+        species_alias = self.strategy.get_species_alias()  # e.g., "K", "Pi", etc.
+
+        # Fetch external inputs: calibration sample and MCTuning version
+        calib_sample = CalibSamples().fetch(year=year, species=species)
+        mc_tuning = MCTunings().fetch(year=year)  # Prefix for the ProbNNghost selection
+
+        # Iterate through control and target regions to dynamically create PIDCalib2 jobs
+        for region in region_id:
+
+            # Establish the path for the executable (run.sh)
+            namespace = f"{species}_to_{region}_like"
+            script_path = Path(
+                f"{output_dir}/{year}/{magpol}/{region}/{species}/{namespace}/run.sh"
+            )
+            script_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Set the appropriate PID cuts for each region
+            pid_cut = (
+                f"{mc_tuning}{self.control_pid_selection}"
+                if region == "control"
+                else f"{mc_tuning}{self.target_pid_selection}"
+            )
+
+            # Establish the binning coordinates
+            Binning = DefaultBinningGenerator(
+                species, species_alias, self.pid_extrap_binning
+            )
+            binning_vars = Binning.get_binning_variables(
+                year
+            )  # List of binning variables
+            binning_path = Binning.generate_output_filepath(
+                species, year, output_dir
+            )  # Path to binning JSON
+            Binning.build(year, output_dir, verbose)  # Write the binning JSON file
+
+            # Write the job executable
+            self._write_job_executable(
+                script_path=script_path,
+                calib_sample=calib_sample,
+                magpol=magpol,
+                species_pidcalib_alias=species_alias,
+                pid_cut=pid_cut,
+                binning_vars=binning_vars,
+                binning_path=binning_path,
+                common_selection=self.common_selection,
+                max_calib_files=self.max_calib_files,
+            )
+
+
+class ParticleRecoPartitionJobGenerator(BaseJobGenerator, JobWriterMixin):
+    """
+    Concrete implementation for generating PIDCalib2 jobs for particles.
+    Inherits from the BaseJobCreator to access the relevant config parameters.
+    """
+
+    def __init__(self, config, strategy: ParticleStrategy):
+        super().__init__(config)
+        self.strategy = strategy
+        self._max_calib_files = config.max_calib_files  # Picked up from the config
+
+    @property
+    def max_calib_files(self):
+        return self._max_calib_files
+
+    def generate_jobs(
+        self,
+        year: str,
+        magpol: str,
+        region_id: list,  # PIDCalibJobFactory sets this by default to ["control", "target"]
+        verbose: bool,
+        output_dir: str = "bin",  # Indicating where bash files will be written to
+        control_region_name: str = "control",
+    ) -> None:
+        """
+        Generate the PIDCalib2 jobs for the given year, magnetic polarity, and regions.
+
+        Parameters
+        ----------
+        year : str
+            The year of data taking (e.g., "2018").
+        magpol : str
+            The magnetic polarity (allowed values are "up" and "down").
+        region_id : list
+            List of regions to apply (allowed values are "control" and "target").
+        verbose : bool
+            If True, include verbose output.
+        output_dir : str
+            Directory where the output will be saved [by default set to `bin`].
+        """
+        species = self.strategy.get_species_name()  # e.g., "kaon", "pion", etc.
+        species_alias = self.strategy.get_species_alias()  # e.g., "K", "Pi", etc.
+
+        # Fetch external inputs: calibration sample and MCTuning version
+        calib_sample = CalibSamples().fetch(year=year, species=species)
+        mc_tuning = MCTunings().fetch(year=year)  # Prefix for the ProbNNghost selection
+
+        # Iterate through control and target regions to dynamically create PIDCalib2 jobs
+        for partition_label, partition_pid_criteria in self.reco_partitions:
+
+            # Establish the path for the executable (run.sh)
+            namespace = f"{species}_to_{partition_label}_like"
+            script_path = Path(
+                f"{output_dir}/{year}/{magpol}/{control_region_name}/{species}/{namespace}/run.sh"
+            )
+            script_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Set the appropriate PID cuts for each region: p(reco | hadron PID & kinematics+occupancy)
+            hadron_enriched_selection = f"{mc_tuning}{self.control_pid_selection} & {partition_pid_criteria}"  # common selection/denominator in the efficiency ratio
+            pid_cut = f"{partition_pid_criteria}"  # numerator in the efficiency ratio
+
+            # Establish the binning coordinates
+            Binning = DefaultBinningGenerator(
+                species, species_alias, self.sweight_binning
+            )
+            binning_vars = Binning.get_binning_variables(
+                year
+            )  # List of binning variables
+            binning_path = Binning.generate_output_filepath(
+                species, year, output_dir
+            )  # Path to binning JSON
+            Binning.build(year, output_dir, verbose)  # Write the binning JSON file
+
+            # Write the job executable
+            self._write_job_executable(
+                script_path=script_path,
+                calib_sample=calib_sample,
+                magpol=magpol,
+                species_pidcalib_alias=species_alias,
+                pid_cut=pid_cut,
+                binning_vars=binning_vars,
+                binning_path=binning_path,
+                common_selection=hadron_enriched_selection,
+                max_calib_files=self.max_calib_files,
+            )
+
+
 class GhostJobGenerator(BaseJobGenerator):
     """
     Concrete implementation for generating PIDCalib2 jobs for ghosts.
@@ -168,3 +266,7 @@ class GhostJobGenerator(BaseJobGenerator):
 
     def generate_control_target_jobs(self):
         pass
+
+
+class ParticleRecoPartitionJobGenerator(BaseJobGenerator, JobWriterMixin):
+    pass

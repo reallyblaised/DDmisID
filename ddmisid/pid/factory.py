@@ -1,6 +1,6 @@
 """Factory interface to engage PIDCalib2 job generation depending on the species specified in the YAML configuration file."""
 
-from ddmisid.pid.job_generator import ParticleJobGenerator, GhostJobGenerator
+from ddmisid.pid.job_generator import ParticleJobGenerator, GhostJobGenerator, ParticleRecoPartitionJobGenerator, GhostRecoPartitionJobGenerator
 from ddmisid.pid.species_strategy import (
     KaonStrategy,
     PionStrategy,
@@ -31,30 +31,34 @@ class PIDCalibJobFactory:
         for species_id, species_alias in self.species.items():  # e.g., {"electron": "e_B_Jpsi"}
             logger.info(f"Generating PIDCalib2 jobs for species: {species_id}")
 
-            # Fetch the appropriate strategy and job generator class for the species
-            strategy, generator_class = self._get_strategy_and_generator(species_id) 
-            job_generator = generator_class(config, strategy) # NOTE: max_calib_files set in the init directly from config
+            # Fetch the appropriate strategy and job generators for each species (control, target, reco partition | control)
+            strategy, macro_generator_class, reco_partition_generator_class = self._get_strategy_and_generator(species_id) 
+            
+            for generator_class in (macro_generator_class, reco_partition_generator_class):
+                job_generator = generator_class(config, strategy)
 
-            # Dynamically generate the jobs, looping through the years and magnetic polarities
-            for year in self.years:
-                for magpol in self.magpols:
-                    logger.info(f"  -> Generating PIDCalib2 jobs for year {year} with polarity {magpol}")
-                    job_generator.generate_jobs(
-                        year=year,
-                        magpol=magpol,
-                        region_id=region_ids,
-                        output_dir=output_dir,
-                        verbose=verbose,
-                    )
+                # Dynamically generate the jobs, looping through the years and magnetic polarities
+                for year in self.years:
+                    for magpol in self.magpols:
+                        logger.info(f"  -> Generating PIDCalib2 jobs for year {year} with polarity {magpol}")
+                        job_generator.generate_jobs(
+                            year=year,
+                            magpol=magpol,
+                            region_id=region_ids,
+                            output_dir=output_dir,
+                            verbose=verbose,
+                        )
 
     def _get_strategy_and_generator(self, species: str) -> tuple:
-        """Fetch the appropriate strategy and generator class for the species."""
+        """Fetch the appropriate strategy and generator class for the species.
+        species identifier; pid eff for control and target; pid eff for reco partitions | control selection.
+        """
         match species:
-            case "pion": return PionStrategy(), ParticleJobGenerator
-            case "proton": return ProtonStrategy(), ParticleJobGenerator
-            case "kaon": return KaonStrategy(), ParticleJobGenerator
-            case "electron": return ElectronStrategy(), ParticleJobGenerator
-            case "ghost": return GhostStrategy(), GhostJobGenerator
+            case "pion": return PionStrategy(), ParticleJobGenerator, ParticleRecoPartitionJobGenerator
+            case "proton": return ProtonStrategy(), ParticleJobGenerator, ParticleRecoPartitionJobGenerator
+            case "kaon": return KaonStrategy(), ParticleJobGenerator, ParticleRecoPartitionJobGenerator
+            case "electron": return ElectronStrategy(), ParticleJobGenerator, ParticleRecoPartitionJobGenerator
+            case "ghost": return GhostStrategy(), GhostJobGenerator, GhostRecoPartitionJobGenerator
             case _: raise ValueError(f"Species {species_id} PIDCalib2 strategy missing or not recognised. Allowed values: ['pion', 'proton', 'kaon', 'electron', 'ghost']")
 
     def _validate_species(self):
