@@ -22,7 +22,7 @@ class SpeciesValidatorMixin:
             )
 
 
-class SpeciesStrategyBase(ABC):
+class BaseSpeciesStrategy(ABC):
     """Abstract base class for species strategies."""
 
     @abstractmethod
@@ -42,13 +42,13 @@ class SpeciesStrategyBase(ABC):
         pass
 
 
-class ParticleStrategy(SpeciesStrategyBase, SpeciesValidatorMixin):
+class ParticleStrategy(BaseSpeciesStrategy, SpeciesValidatorMixin):
     """
     Strategy for particle species (e.g., kaon, pion, proton, electron) that rely on PIDCalib2 to extract PID efficiencies.
     This strategy fetches aliases from the config YAML file and validates them against PIDCalib2 requirements.
     """
 
-    def __init__(self, config, species):
+    def __init__(self, species, config=config):
         self._species = species
         self._species_alias_map = config.pid.species  # only relevent to particles
         self.validate_species()
