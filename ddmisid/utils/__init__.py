@@ -5,3 +5,9 @@ from .io import (
     load_hist,
 )
 from .binning import DefaultBinningGenerator, PIDCalibAliasFactory
+from .histogram import (
+    NegativeEffProcessor,
+    NullEffProcessor,
+    EfficiencyHistogramProcessor,
+    load_hist,
+)

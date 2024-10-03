@@ -22,6 +22,3 @@ try:
     _load_validated_config()
 except FileNotFoundError:
     config = None
-
-
-_pid_eff_tolerance = 0.1

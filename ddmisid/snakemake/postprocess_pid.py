@@ -1,9 +1,6 @@
 """
-Load the PID efficiency histograms and set entries to zero if within tolerance
+Handle the cases where effic
 """
-
-__author__ = "Blaise Delaney"
-__email__ = "blaise.delaney at cern.ch"
 
 from ddmisid import load_hist, _pid_eff_tolerance
 import numpy as np
