@@ -75,7 +75,7 @@ rule extract_pid_effs:
 
 rule process_pid_effs:
     """
-    Within a nominal tolerance, round down efficiencies to 1e-6; this accounts also for the case where the efficiency is negative as computed by PIDCalib2
+    Processing stage to handle negative/null PID efficiencies.
     """
     input:
         pidcalib_hists = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl",
@@ -91,7 +91,7 @@ rule process_pid_effs:
 
 def aggregate_pid_effs(wildcards):
     '''
-    Collect the variable number of sub-directories spawned by the PIDCalib2 setup, and post-processed efficiency histograms therein
+    Collect the variable number of sub-directories spawned by PIDEffX(), and post-processed efficiency histograms therein.
     '''
     checkpoint_output = checkpoints.generate_pid_efficiency_scripts.get(**wildcards).output[0]
     year, magpol, dllmu_bin, species, eff_dirs = glob_wildcards(os.path.join(checkpoint_output, '{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh'))
