@@ -6,7 +6,6 @@ from .utils.io import (
     simple_load,
     write_df,
     update_write_df,
-    load_hist,
     extract_sel_dict_branches,
 )
 from .utils.plot import (
@@ -16,6 +15,7 @@ from .utils.plot import (
 )
 from .auth import kinit
 from .engine import _load_validated_config, config
+from .utils.histogram import load_hist, EfficiencyHistogramProcessor
 
 # Attempt to load the pre-validated config when importing the package
 try:
