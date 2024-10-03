@@ -20,7 +20,7 @@ from ddmisid.pid import PIDEffXJobFactory
 # cleanup after completion
 onsuccess: 
     shutil.rmtree(".snakemake/metadata")
-    shutil.rmtree("bin") # cleanup pidcalib efficiencies
+    # shutil.rmtree("bin") # cleanup pidcalib efficiencies
     shutil.rmtree("obs") # cleanup data partitions
 
 rule all:
