@@ -11,7 +11,7 @@ from ddmisid.pid.species_strategy import (
 from ddmisid.engine import config
 from loguru import logger
 
-class PIDCalibJobFactory:
+class PIDEffXJobFactory:
     """
     Factory interface to engage PIDCalib2 job generation depending on the species specified in the YAML configuration file.
     This defines the job creation strategy for DDmisID whilst allowing the user to specify a (sub)set of species ({π,p,K,e,g}) to run over.

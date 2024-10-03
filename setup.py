@@ -26,7 +26,7 @@ setup(
         "uncertainties",
         "cabinetry",
         "polars",
-        "pydantic",
+        "pydantic>=2.0.0",
         "pytest",
         # "snakemake", # recommended install via mamba and running `pip install -e .` after loading mamba environment
     ],

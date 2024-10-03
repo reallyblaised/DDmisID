@@ -15,6 +15,7 @@ import os
 from snakemake.io import glob_wildcards    
 import pyfiglet
 from ddmisid.engine import config
+from ddmisid.pid import PIDEffXJobFactory
 
 # cleanup after completion
 onsuccess: 
@@ -37,44 +38,37 @@ rule all:
 #                          PID Efficiency Map Section
 # ----------------------------------------------------------------------------------
 #   - spawn the executables to run PIDCalib2 to generate the PID maps (!mu, mu)
-#   - run the executables -> histograms.pkl with binning directory sub-structure
-#   - signal completion of all PIDCalib2 jobs 
+#   - run the executables -> perf.pkl efficiecy histograms 
+#   - post-process the histograms to handle negative/null efficiencies
+#   - signal completion of all pideffx jobs (PIDCalib2 for particles, MC for ghosts)
 # ==================================================================================
-checkpoint gen_sh_files:
+checkpoint generate_pid_efficiency_scripts:
     """
-    Spawn the PIDCalib2 jobs as instructed in config YAML file; store bespoke bash scripts in /bin/
+    Spawn pid-efficiency-extraction (pideffx) jobs as instructed in config YAML file. 
+    Store the resulting bash scripts in a directory tree spawned within /bin/.
     """
     input:
-        config_executable = "ddmisid/snakemake/setup_pidcalib_jobs.py",
+        ".schema/validated_config.json"
     output:
-        dir = directory("bin/"),
-    params:
-        verbose = config.verbose,
-        max_calib_files = config.max_calib_files
+        pid_efficiency_executable_parent_directory = directory("bin/"),
     run:
-        command = "python {input.config_executable} --pid_regime reco --pid_regime he_all" 
-        
-        # run [nominal, test, verbose]
-        if params.verbose:
-            print(">>> WARNING: running PIDCalib2 in `verbose` mode")
-            command+=" --verbose"
-        if params.test != -1: # a subset of the calibration files 
-            print(f">>> WARNING: running PIDCalib2 in `test` mode with {{{params.test}}} files")
-            command+=" --test"
+        # initialise the job script generator (PIDCalib2 for particles; bespoke MC processing for ghosts)
+        job_factory = PIDEffXJobFactory()
 
-        shell(command)
+        # generate the executable bash scripts reflecting the user-specified year, magnet polarity, pid category, and species
+        job_factory.generate_jobs(output.pid_efficiency_executable_parent_directory)
 
 
-rule run_pidcalib:
+rule extract_pid_effs:
     """
-    Run the PIDCalib2 jobs as spawned in the previous step; store the efficiency histograms .pkl in /bin/
+    Run the pideffx jobs as spawned in the previous step. Tallyt the resulting efficiency histograms.
     """
     input:
         bash_file = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh",
     output:
         pidcalib_hists = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl",
     log: 
-        "logs/workflow/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/pidcalib_run.log"
+        "logs/workflow/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/pideffx.log"
     run:
         shell("bash {input.bash_file} &> {log}")
  
@@ -90,27 +84,28 @@ rule process_pid_effs:
     params:
         executable = "ddmisid/snakemake/postprocess_pid.py"   
     log: 
-        "logs/workflow/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/postprocessed_pid_eff_hists.log"
+        "logs/workflow/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/process_pideffx.log"
     run:
         shell("python {ddmisid/snakemake/postprocess} --input {input.pidcalib_hists} --output {output.postprocessed_pid_hists} &> {log}")
 
 
-def aggregate_pidcalib(wildcards):
+def aggregate_pid_effs(wildcards):
     '''
     Collect the variable number of sub-directories spawned by the PIDCalib2 setup, and post-processed efficiency histograms therein
     '''
-    checkpoint_output = checkpoints.gen_sh_files.get(**wildcards).output[0]
+    checkpoint_output = checkpoints.generate_pid_efficiency_scripts.get(**wildcards).output[0]
     year, magpol, dllmu_bin, species, eff_dirs = glob_wildcards(os.path.join(checkpoint_output, '{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh'))
 
-    return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf_postprocessed.pkl", zip, year=year, magpol=magpol, dllmu_bin=dllmu_bin, species=species, eff_dirs=eff_dirs)
+    #return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf_postprocessed.pkl", zip, year=year, magpol=magpol, dllmu_bin=dllmu_bin, species=species, eff_dirs=eff_dirs)
+    return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl", zip, year=year, magpol=magpol, dllmu_bin=dllmu_bin, species=species, eff_dirs=eff_dirs)
 
 
-rule collect_pidcalib:
+rule collect_pid_effs:
     """
-    Signal completion of all PIDCalib2 jobs via dummy temporary file
+    Signal completion of all pideffx jobs via dummy temporary file
     """
     input:
-        aggregate_pidcalib
+        aggregate_pid_effs
     output:
         combined = temp("pidcalib_efficiency_maps.done"),
     shell:
@@ -280,7 +275,7 @@ rule collect_pidcalib:
 #         Collect the variable number of sub-directories produced by setup.py that live in /exec/,
 #         and expand to use perfHists.root files produced by PIDCalib2
 #         '''
-#         checkpoint_output = checkpoints.gen_sh_files.get(**wildcards).output[0]
+#         checkpoint_output = checkpoints.generate_pid_efficiency_scripts.get(**wildcards).output[0]
         
 #         year, eff_dirs = glob_wildcards(os.path.join(checkpoint_output, '{year}/'+_magpol+'/'+_dllmu_bin+'/'+_species+'/{eff_dirs}/run.sh'))
         

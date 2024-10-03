@@ -45,20 +45,15 @@ def build(config_path):  # This is the corresponding Python variable for the opt
     # Load and validate the configuration
     try:
         _load_config(config_path)  # Pass config_path to _load_config
+
         config = get_config()  # retrive updated global config
         if config is None:  # Ensure config is loaded correctly
             logger.error("Config not set. Please ensure the configuration is valid.")
             return
         logger.info(f"DDmisID engine built successfully from: {config_path}")
 
-        # Tabulate the configuration for a cleaner display
-        config_dict = config.dict()  # Convert to a dictionary
-        table_data = []
-
         # Print a detailed report of the full configuration
-        config_report = config.json(
-            indent=4
-        )  # Or .dict() if you prefer dictionary format
+        config_report = config.model_dump_json(indent=4)
         logger.info(
             f"\n\nConfiguration report:\n---------------------\n{config_report}"
         )
