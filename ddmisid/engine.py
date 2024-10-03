@@ -12,8 +12,10 @@ from ddmisid import read_config
 # Global variable to store the validated config
 config = None
 config_path_json = Path(
-    ".ddmisid/validated_config.json"
+    ".ddmisid/schema/validated_config.json"
 )  # Hidden directory for the validated config
+# book directory structure, if missing
+config_path_json.parent.mkdir(parents=True, exist_ok=True)
 
 
 def _load_config(config_path: str):
@@ -23,9 +25,8 @@ def _load_config(config_path: str):
     config = DDmisIDConfig(**config_data)
 
     # Persist the validated config to a hidden directory
-    config_path_json.parent.mkdir(exist_ok=True)
     with config_path_json.open("w") as f:
-        f.write(config.json(indent=4))
+        config_report = json.dumps(config.dict(), indent=4)
 
 
 def get_config():
