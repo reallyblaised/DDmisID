@@ -91,9 +91,7 @@ class DDmisIDConfig(BaseModel):
     data: DataConfig = Field(..., description="Data configuration")
 
     class Config:
-        allow_mutation = (
-            False  # ensure immutability of the configuration post-validation
-        )
+        frozen = False  # ensure immutability of the configuration post-validation
 
     # non-negative calib files read in from eos
     @validator("max_calib_files")
