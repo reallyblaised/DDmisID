@@ -90,6 +90,11 @@ class DDmisIDConfig(BaseModel):
     pid: PIDConfig = Field(..., description="PID configuration")
     data: DataConfig = Field(..., description="Data configuration")
 
+    class Config:
+        allow_mutation = (
+            False  # ensure immutability of the configuration post-validation
+        )
+
     # non-negative calib files read in from eos
     @validator("max_calib_files")
     def validate_max_calib_files(cls, v):
