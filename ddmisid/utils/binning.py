@@ -176,6 +176,6 @@ class DefaultBinningGenerator(BinningGeneratorBase):
             The path for the binning JSON file.
         """
         if self.binning_alias:
-            return Path(f"{outdir}/binning_{year}/{self.binning_alias}.json")
+            return Path(f"{outdir}/binning_{year}/{species}_{self.binning_alias}.json")
         else:
             return Path(f"{outdir}/binning_{year}/{species}.json")

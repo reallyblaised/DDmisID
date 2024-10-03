@@ -9,7 +9,7 @@ user_id: "bldelane" # CERN user ID for kinit @CERN.CH
 # if true, run pidcalib in `--test` mode
 max_calib_files: 3 # how many calibration samples to run over in pidcalib [applies only if test is True]
 # if true, produce all run info, including the path to calibration samples, TDirectiory and TTree
-verbose: False 
+verbose: True 
 
 # =======================
 # pidcalib2 configuration - if in doubt: https://twiki.cern.ch/twiki/bin/view/LHCb/PIDCalibPackage#Which_variables_are_available_wi

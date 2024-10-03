@@ -21,7 +21,6 @@ class PIDCalibJobFactory:
         self.years = config.pid.years
         self.magpols = config.pid.magpols
         self.species = config.pid.species
-        self.max_calib_files = config.max_calib_files  # Max files to process (-1 for all, else user-defined)
         self._validate_species()
 
     def generate_jobs(
@@ -32,22 +31,26 @@ class PIDCalibJobFactory:
             logger.info(f"Generating PIDCalib2 jobs for species: {species_id}")
 
             # Fetch the appropriate strategy and job generators for each species (control, target, reco partition | control)
-            strategy, macro_generator_class, reco_partition_generator_class = self._get_strategy_and_generator(species_id) 
+            strategy, control_target_job_generator, reco_partition_job_generator = self._get_strategy_and_generator(species_id) 
             
-            for generator_class in (macro_generator_class, reco_partition_generator_class):
-                job_generator = generator_class(config, strategy)
-
-                # Dynamically generate the jobs, looping through the years and magnetic polarities
-                for year in self.years:
-                    for magpol in self.magpols:
-                        logger.info(f"  -> Generating PIDCalib2 jobs for year {year} with polarity {magpol}")
-                        job_generator.generate_jobs(
-                            year=year,
-                            magpol=magpol,
-                            region_id=region_ids,
-                            output_dir=output_dir,
-                            verbose=verbose,
-                        )
+            # Dynamically generate the jobs, looping through the years and magnetic polarities
+            for year in self.years:
+                for magpol in self.magpols:
+                    # first, control and target pid-efficiency-extra jobs
+                    logger.info(f"  -> Generating PIDCalib2 jobs for year {year} with polarity {magpol} targeting {region_ids}.")
+                    control_target_job_generator(config, strategy).generate_jobs(
+                        year=year,
+                        magpol=magpol,
+                        region_id=region_ids,
+                        output_dir=output_dir,
+                    )
+                    # second, reco partition pid-efficiency-extra jobs
+                    logger.info(f"  -> Generating PIDCalib2 jobs for year {year} with polarity {magpol} targeting reco partition.")
+                    reco_partition_job_generator(config, strategy).generate_jobs(
+                        year=year,
+                        magpol=magpol,
+                        output_dir=output_dir,
+                    )
 
     def _get_strategy_and_generator(self, species: str) -> tuple:
         """Fetch the appropriate strategy and generator class for the species.
@@ -59,7 +62,7 @@ class PIDCalibJobFactory:
             case "kaon": return KaonStrategy(), ParticleJobGenerator, ParticleRecoPartitionJobGenerator
             case "electron": return ElectronStrategy(), ParticleJobGenerator, ParticleRecoPartitionJobGenerator
             case "ghost": return GhostStrategy(), GhostJobGenerator, GhostRecoPartitionJobGenerator
-            case _: raise ValueError(f"Species {species_id} PIDCalib2 strategy missing or not recognised. Allowed values: ['pion', 'proton', 'kaon', 'electron', 'ghost']")
+            case _: raise ValueError(f"Species {species} PIDCalib2 strategy missing or not recognised. Allowed values: ['pion', 'proton', 'kaon', 'electron', 'ghost']")
 
     def _validate_species(self):
         """Ensure species in the configuration file are valid."""

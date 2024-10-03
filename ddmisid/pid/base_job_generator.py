@@ -17,6 +17,7 @@ class BaseJobGenerator(ABC):
         self._target_pid_selection = config.pid.target
         self._common_selection = config.pid.common_selection
         self._reco_partitions = config.pid.reco_partitions
+        self._verbose = config.verbose
 
     @property
     def sweight_binning(self):
@@ -42,6 +43,10 @@ class BaseJobGenerator(ABC):
     def reco_partitions(self):
         return self._reco_partitions
 
+    @property
+    def verbose(self):
+        return self._verbose
+
     @abstractmethod
     def generate_jobs(
         self,
@@ -49,6 +54,5 @@ class BaseJobGenerator(ABC):
         magpol: str,
         region_id: list,
         outdir_dir: str,
-        verbose: bool,
     ) -> None:
         pass
