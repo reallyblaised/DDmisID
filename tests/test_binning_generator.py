@@ -19,7 +19,8 @@ def setup_binning():
     }
 
     binning_generator = DefaultBinningGenerator(
-        species=example_species,
+        species="kaon",
+        species_alias="K",
         binning=example_binning,
         binning_alias="TestBinning",
     )
@@ -65,7 +66,7 @@ def test_binning_build(setup_binning):
     setup_binning.build(year="2016", outdir="tests/data", verbose=False)
 
     # Read JSON file back in, and compare to expected binning
-    with open(Path("tests/data/binning_2016/TestBinning.json")) as f:
+    with open(Path("tests/data/binning_2016/kaon_TestBinning.json")) as f:
         binning = json.load(f)
 
     assert binning == expected_binning

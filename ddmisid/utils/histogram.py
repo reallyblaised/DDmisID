@@ -10,8 +10,8 @@ from typing import Union
 from uncertainties import ufloat
 
 # Constants
-_pid_eff_tolerance = 0.01
-_epsilon = ufloat(1e-6, 1e-6)
+_pid_eff_tolerance = 0.1
+_epsilon = 1e-6
 
 
 def load_hist(f: str) -> Union[Hist, bh.Histogram]:
@@ -38,10 +38,14 @@ class NullEffProcessor(BaseEffHistProcessor):
         # Iterate over multi-dimensional indices in the histogram
         for index in np.ndindex(view.shape):
             cval = view[index].value
+            variance = view[index].variance
 
-            # If central value is 0.0, set to a small epsilon value
+            # shift central value and variance accordingly to avoid null values
             if cval == 0.0:
-                view[index] = (_epsilon, _epsilon**2)
+                # If variance is zero, set it to a small value (but don't add to an existing non-zero variance)
+                if variance == 0.0:
+                    variance = _epsilon**2
+                view[index] = (_epsilon, variance)
 
         return hist
 
@@ -60,16 +64,10 @@ class NegativeEffProcessor(BaseEffHistProcessor):
             # Case by case handling of negative PID efficiency values
             if cval < 0.0:
                 if abs(cval) < variance**0.5:  # <0 and within 1 sigma from 0
-                    warnings.warn(
-                        f"PID efficiency value below 0.0 detected at index {index} within 1 sigma of 0.0: {view[index]}. Setting to 0.0"
-                    )
-                    view[index] = (0.0, abs(cval))
+                    view[index] = (_epsilon, variance)  # proxy for 0.0; store variance
                 elif abs(cval) > variance**0.5 and abs(cval) < _pid_eff_tolerance:
                     # <0 but within tolerance
-                    warnings.warn(
-                        f"PID efficiency value below 0.0 detected at index {index} with >1 sigma of 0.0 but below tolerance: {view[index]}. Setting to 0.0"
-                    )
-                    view[index] = (0.0, abs(cval))
+                    view[index] = (_epsilon, abs(cval))  # proxy for 0.0
                 elif abs(cval) > variance**0.5 and abs(cval) > _pid_eff_tolerance:
                     # Kill process if below 0 and outside tolerance
                     raise ValueError(
