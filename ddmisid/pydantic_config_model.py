@@ -3,7 +3,7 @@
 from pydantic import BaseModel, Field, validator
 from typing import List, Dict, Optional
 from pydantic import BaseModel, Field, validator
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 
 
 class PIDConfig(BaseModel):
@@ -62,7 +62,9 @@ class PIDConfig(BaseModel):
 class DataConfig(BaseModel):
     """Data configuration for DDmisID."""
 
-    input_path: str = Field(..., description="Path to the input data file")
+    input_path: Dict[str, Union[str, Dict[str, str]]] = Field(
+        ..., description="Path to the input data file"
+    )
     data_key: Optional[str] = Field(
         None, description="Key for the data tree in the input file"
     )
