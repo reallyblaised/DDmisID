@@ -9,7 +9,7 @@ class PIDCalibAliasFactory:
     """Factory to process variable names based on year and species."""
 
     @staticmethod
-    def process_variable(var: str, year: str, spc: str | None = None) -> str:
+    def process_variable(var: str, year: str) -> str:
         """
         Apply year-based processing to variable names.
         Source: https://twiki.cern.ch/twiki/bin/view/LHCb/PIDCalibPackage

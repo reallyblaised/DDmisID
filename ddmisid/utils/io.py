@@ -344,9 +344,3 @@ def extract_sel_dict_branches(selection_dict: dict) -> list:
         all_branches.update(branches)
 
     return list(all_branches)
-
-
-def load_hist(f):
-    """Load boost_histogram/Hist from pickle file"""
-    with open(f, "rb") as f_in:
-        return pickle.load(f_in)
