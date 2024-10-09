@@ -24,6 +24,11 @@ import hist
 from typing import Union, List, Dict
 
 
+SPECIES = [
+    recocat.replace("_like", "") for recocat in config.pid.reco_partitions.keys()
+]
+
+
 def extract_axis_name(axis: bh.axis) -> str:
     """Extract the name of histogram axis"""
     try:
@@ -63,7 +68,6 @@ def validate_n_axes(
 def process_rel_n_hist(
     hist: bh.Histogram,
     binning: Dict[str, List[float]] = config.pid.sweight_binning,
-    verbose: bool = False,
 ) -> Dict[str, bh.Histogram]:
     """Validate the relative abundances, binwise"""
     rel_h = load_hist(hist)  # load the relative abundances histogram
@@ -75,8 +79,9 @@ def process_rel_n_hist(
     return rel_h
 
 
-def process_pid_hists(
-    opts: argparse.Namespace, binning: config.pid.pid_extrap_binning
+def register_pid_maps(
+    opts: argparse.Namespace,
+    binning: Dict[str, List[float]] = config.pid.pid_extrap_binning,
 ) -> Dict[str, bh.Histogram]:
     """Validate PID histogram structure against user-defined nominal binning"""
     pid_container = {}
@@ -101,92 +106,90 @@ def process_pid_hists(
     return pid_container
 
 
-def compute_misid_w_binwise(
-    i: int,
-    j: int,
-    k: int,
-    pid_effs: Dict[str, bh.Histogram],
-    relative_yields: bh.Histogram,
-    species: tuple = ("electron", "kaon", "pion", "proton", "ghost"),
-) -> [float, float]:
-    """Exract the misID weight, assuming index order p, eta, ntracks [checks in place]"""
+# def compute_misid_w_binwise(
+#     i: int,
+#     j: int,
+#     k: int,
+#     pid_effs: Dict[str, bh.Histogram],
+#     relative_yields: bh.Histogram,
+#     species: tuple = SPECIES,
+# ) -> [float, float]:
+#     """Exract the misID weight, assuming index order p, eta, ntracks [checks in place]"""
 
-    # sanity
-    print(relative_yields[i, j, k, ...])
-    assert (
-        abs(relative_yields[i, j, k, ...].sum().value - 1.0) < 1e-3
-    ), f"Normalisation check fail: relative yields in bin ({i}, {j}, {k}) are incompatible with normalisation to unity and the 1e-3 level"
+#     # sanity
+#     print(relative_yields[i, j, k, ...])
+#     assert (
+#         abs(relative_yields[i, j, k, ...].sum().value - 1.0) < 1e-3
+#     ), f"Normalisation check fail: relative yields in bin ({i}, {j}, {k}) are incompatible with normalisation to unity and the 1e-3 level"
 
-    # consistency check
-    misid_w = 0.0
-    for s in species:
+#     # consistency check
+#     misid_w = 0.0
+#     for s in species:
 
-        # fetch the factors in the species-specific contributions to the total misID weight, incorporating the respective uncertainties
-        ni_nref = ufloat(
-            relative_yields[i, j, k, f"{s}_yield"].value,
-            relative_yields[i, j, k, f"{s}_yield"].variance ** 0.5,
-        )
-        num_pid_eff = ufloat(
-            pid_effs[f"{s}_to_mu"][i, j, k].value,
-            pid_effs[f"{s}_to_mu"][i, j, k].variance ** 0.5,
-        )
-        denom_pid_eff = ufloat(
-            pid_effs[f"{s}_to_antimu"][i, j, k].value,
-            pid_effs[f"{s}_to_antimu"][i, j, k].variance ** 0.5,
-        )
+#         # fetch the factors in the species-specific contributions to the total misID weight, incorporating the respective uncertainties
+#         ni_nref = ufloat(
+#             relative_yields[i, j, k, f"{s}_yield"].value,
+#             relative_yields[i, j, k, f"{s}_yield"].variance ** 0.5,
+#         )
+#         num_pid_eff = ufloat(
+#             pid_effs[f"{s}_to_mu"][i, j, k].value,
+#             pid_effs[f"{s}_to_mu"][i, j, k].variance ** 0.5,
+#         )
+#         denom_pid_eff = ufloat(
+#             pid_effs[f"{s}_to_antimu"][i, j, k].value,
+#             pid_effs[f"{s}_to_antimu"][i, j, k].variance ** 0.5,
+#         )
 
-        # species weight factor
-        species_w = ni_nref * (1 / denom_pid_eff) * num_pid_eff
+#         # species weight factor
+#         species_w = ni_nref * (1 / denom_pid_eff) * num_pid_eff
 
-        # linear combination of species factors
-        misid_w += species_w
+#         # linear combination of species factors
+#         misid_w += species_w
 
-    return misid_w.n, misid_w.s**2  # store variance by convention
-
-
-def compute_misid_w_hist(
-    pid_effs: Dict[str, bh.Histogram],
-    relative_yields: bh.Histogram,
-    species: tuple = ("electron", "kaon", "pion", "proton"),
-) -> bh.Histogram:
-    """Generate a lookup table for misid_w, indexed by kinematics and occupancy bin indices"""
-
-    # sanity check: consistent structure among histograms
-    for s in species:
-        check_axes_match(
-            relative_yields[..., -1],
-            pid_effs[f"{s}_to_mu"],
-            pid_effs[f"{s}_to_antimu"],
-        )
-
-    # book empty container (cval, std**2)
-    misid_w_hist = bh.Histogram(
-        *relative_yields[..., -1].axes, storage=bh.storage.Weight()
-    )
-
-    # RFE: this assumes 3 binning axes
-    # fill
-    for i, j, k in product(
-        range(len(misid_w_hist.axes[0])),
-        range(len(misid_w_hist.axes[1])),
-        range(len(misid_w_hist.axes[2])),
-    ):
-        misid_w_hist[i, j, k] = compute_misid_w_binwise(
-            i, j, k, pid_effs=pid_effs, relative_yields=relative_yields, species=species
-        )
-
-    return misid_w_hist
+#     return misid_w.n, misid_w.s**2  # store variance by convention
 
 
-def compure_misid_weight(
+# def compute_misid_w_hist(
+#     pid_effs: Dict[str, bh.Histogram],
+#     relative_yields: bh.Histogram,
+#     species: tuple = SPECIES,
+# ) -> bh.Histogram:
+#     """Generate a lookup table for misid_w, indexed by kinematics and occupancy bin indices"""
+
+#     # sanity check: consistent structure among histograms
+#     for s in species:
+#         check_axes_match(
+#             relative_yields[..., -1],
+#             pid_effs[f"{s}_to_mu"],
+#             pid_effs[f"{s}_to_antimu"],
+#         )
+
+#     # book empty container (cval, std**2)
+#     misid_w_hist = bh.Histogram(
+#         *relative_yields[..., -1].axes, storage=bh.storage.Weight()
+#     )
+
+#     # RFE: this assumes 3 binning axes
+#     # fill
+#     for i, j, k in product(
+#         range(len(misid_w_hist.axes[0])),
+#         range(len(misid_w_hist.axes[1])),
+#         range(len(misid_w_hist.axes[2])),
+#     ):
+#         misid_w_hist[i, j, k] = compute_misid_w_binwise(
+#             i, j, k, pid_effs=pid_effs, relative_yields=relative_yields, species=species
+#         )
+
+#     return misid_w_hist
+
+
+def compute_misid_weight(
     p_val: float,
     eta_val: float,
     ntracks_val: int,
     pid_effs: Dict[str, bh.Histogram],
     relative_yields_hist: Union[bh.Histogram, hist.Hist],
-    species: list = [
-        recocat.replace("_like", "") for recocat in config.pid.recocat.keys()
-    ],
+    species: list = SPECIES,
 ) -> float:
     """Element-wise weight assignment, accounting for the fact that the per-species abundance and control- and signal-0 efficiecy maps may adopt different binning"""
     # validate binning of each
@@ -269,36 +272,37 @@ if __name__ == "__main__":
     )
     opts = parser.parse_args()
 
-    # user-defined binning
-    binning = read_config("config/main.yml", key="pid")["binning"]
-
-    # process input in dedicated containers
-    pid_effs = process_pid_hists(opts, binning, False)
+    # pid maps for (un)folding into the misID weight
+    pid_effs = register_pid_maps(opts)
 
     # relative abundance prefactors
-    rel_n_sp = process_rel_n_hist(opts.rel_abundances, binning)
+    rel_n_sp = process_rel_n_hist(opts.rel_abundances)
 
-    # compute the misid_w, binwise and store into lookup histogram
-    misid_w_hist = compute_misid_w_hist(pid_effs, rel_n_sp)
+    # partial for compliance with the polars API
+    assign_misid_w = partial(
+        compute_misid_weight, pid_effs=pid_effs, relative_yields_hist=rel_n_sp
+    )
 
     # hadron-enriched observations as lazyframe for fast API
     data = pl.from_pandas(
-        simple_load(
-            path=opts.obs,
-            key=opts.key,
+        load_root(
+            path=config.data.input_path,
+            key=config.data.data_key,
+            tree=config.data.data_tree,
             library="pd",
+            max_events=1e6,
         )
     ).lazy()
 
     # compute misID weights and store into new branch `misid_w`
     data_update = data.with_columns(
-        pl.struct(["Mu_plus_P", "Mu_plus_LK_ETA", "nTracks"])
+        pl.struct(["Kplus_P", "Kplus_LOKI_ETA", "nTracks"])
         .map_elements(
-            lambda x: misid_w_hist[
-                bh.loc(x["Mu_plus_P"]),
-                bh.loc(x["Mu_plus_LK_ETA"]),
-                bh.loc(x["nTracks"]),
-            ].value,
+            lambda x: assign_misid_w(
+                p_val=x["Kplus_P"],
+                eta_val=x["Kplus_LOKI_ETA"],
+                ntracks_val=x["nTracks"],
+            ),
             return_dtype=pl.Float64,
         )
         .alias("misid_w")
