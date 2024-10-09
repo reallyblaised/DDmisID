@@ -18,8 +18,8 @@ class PIDEffXJobFactory:
     """
 
     def __init__(self):
-        self.years = config.pid.years
-        self.magpols = config.pid.magpols
+        self.year = config.pid.year
+        self.magpol = config.pid.magpol
         self.species = config.pid.species
         self._validate_species()
 
@@ -33,24 +33,21 @@ class PIDEffXJobFactory:
             # Fetch the appropriate strategy and job generators for each species (control, target, reco partition | control)
             strategy, control_target_job_generator, reco_partition_job_generator = self._get_strategy_and_generator(species_id) 
             
-            # Dynamically generate the jobs, looping through the years and magnetic polarities
-            for year in self.years:
-                for magpol in self.magpols:
-                    # first, control and target pid-efficiency-extra jobs
-                    logger.info(f"  -> Generating PIDCalib2 jobs for year {year} with polarity {magpol} targeting {region_ids}.")
-                    control_target_job_generator(config, strategy).generate_jobs(
-                        year=year,
-                        magpol=magpol,
-                        region_id=region_ids,
-                        output_dir=output_dir,
-                    )
-                    # second, reco partition pid-efficiency-extra jobs
-                    logger.info(f"  -> Generating PIDCalib2 jobs for year {year} with polarity {magpol} targeting reco partition.")
-                    reco_partition_job_generator(config, strategy).generate_jobs(
-                        year=year,
-                        magpol=magpol,
-                        output_dir=output_dir,
-                    )
+            # first, control and target pid-efficiency-extra jobs
+            logger.info(f"  -> Generating PIDCalib2 jobs for year {self.year} with polarity {self.magpol} targeting {region_ids}.")
+            control_target_job_generator(config, strategy).generate_jobs(
+                year=self.year,
+                magpol=self.magpol,
+                region_id=region_ids,
+                output_dir=output_dir,
+            )
+            # second, reco partition pid-efficiency-extra jobs
+            logger.info(f"  -> Generating PIDCalib2 jobs for year {self.year} with polarity {self.magpol} targeting reco partition.")
+            reco_partition_job_generator(config, strategy).generate_jobs(
+                year=self.year,
+                magpol=self.magpol,
+                output_dir=output_dir,
+            )
 
     def _get_strategy_and_generator(self, species: str) -> tuple:
         """Fetch the appropriate strategy and generator class for the species.

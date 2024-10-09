@@ -10,43 +10,18 @@ __author__ = "Blaise Delaney"
 __email__ = "blaise.delaney at cern.ch"
 
 import polars as pl
-from ddmisid.utils import read_config, simple_load, load_hist
+from ddmisid.utils import load_root, load_hist
+from ddmisid.engine import config
 import argparse
 import numpy as np
-import boost_histogram as bh
-from typing import Dict
 import warnings
 import pprint
 from uncertainties import ufloat
 from functools import partial
 from itertools import product
-import uproot
-
-
-def check_axes_match(*histograms: bh.Histogram) -> None:
-    """Check if all histograms have the same axes and edges"""
-
-    # Ensure there is at least one histogram to compare
-    if not histograms:
-        raise ValueError("At least two histogram are required for an axes comparison")
-
-    # reference histogram for comparison
-    ref_hist = histograms[0]
-
-    # iterate through all other histograms
-    for hist in histograms[1:]:
-        # check number of axes
-        if len(ref_hist.axes) != len(hist.axes):
-            raise ValueError(
-                f"Histogram {hist} has a different number of axes compared to reference histogram."
-            )
-
-        # xheck edges of each axis
-        for ref_axis, other_axis in zip(ref_hist.axes, hist.axes):
-            if not np.array_equal(ref_axis.edges, other_axis.edges):
-                raise ValueError(
-                    f"Axes edges do not match between histograms: {ref_axis.edges} vs {other_axis.edges}"
-                )
+import boost_histogram as bh
+import hist
+from typing import Union, List, Dict
 
 
 def extract_axis_name(axis: bh.axis) -> str:
@@ -58,8 +33,7 @@ def extract_axis_name(axis: bh.axis) -> str:
 
 
 def validate_binning(
-    histogram: bh.Histogram,
-    binning: Dict[str, np.ndarray | list],
+    histogram: bh.Histogram, binning: Dict[str, Union[List[float], np.ndarray]]
 ) -> None:
     """Axis validation against the nominal user-defined binning scheme"""
     for axis in histogram.axes:
@@ -77,7 +51,7 @@ def validate_binning(
 
 
 def validate_n_axes(
-    histogram: bh.Histogram, binning: Dict[str, np.ndarray | list]
+    histogram: bh.Histogram, binning: Dict[str, Union[List[float], np.ndarray]]
 ) -> None:
     """Validate axes multiplicity"""
     if len(histogram.axes) != len(binning):
@@ -86,10 +60,23 @@ def validate_n_axes(
         )
 
 
-def process_pid_hists(
-    opts: argparse.Namespace,
-    binning: Dict[str, np.ndarray | list],
+def process_rel_n_hist(
+    hist: bh.Histogram,
+    binning: Dict[str, List[float]] = config.pid.sweight_binning,
     verbose: bool = False,
+) -> Dict[str, bh.Histogram]:
+    """Validate the relative abundances, binwise"""
+    rel_h = load_hist(hist)  # load the relative abundances histogram
+
+    # Validate the binning before adding it to the container, excluding the species axes
+    validate_n_axes(rel_h[..., -1], binning)
+    validate_binning(rel_h[..., -1], binning)
+
+    return rel_h
+
+
+def process_pid_hists(
+    opts: argparse.Namespace, binning: config.pid.pid_extrap_binning
 ) -> Dict[str, bh.Histogram]:
     """Validate PID histogram structure against user-defined nominal binning"""
     pid_container = {}
@@ -111,30 +98,7 @@ def process_pid_hists(
             # If test passed, load histograms into container
             pid_container[key] = pid_hist
 
-    # verbose print of dict
-    if verbose:
-        pprint.pprint(pid_container, width=40, indent=4)
-
     return pid_container
-
-
-def process_rel_n_hist(
-    hist: bh.Histogram,
-    binning: Dict[str, np.ndarray | list],
-    verbose: bool = False,
-) -> Dict[str, bh.Histogram]:
-    """Validate the relative abundances, binwise"""
-    rel_h = load_hist(hist)  # load the relative abundances histogram
-
-    # Validate the binning before adding it to the container, excluding the species axes
-    validate_n_axes(rel_h[..., -1], binning)
-    validate_binning(rel_h[..., -1], binning)
-
-    # verbose print of dict
-    if verbose:
-        pprint.pprint(rel_h, width=40, indent=4)
-
-    return rel_h
 
 
 def compute_misid_w_binwise(
@@ -214,6 +178,45 @@ def compute_misid_w_hist(
     return misid_w_hist
 
 
+def compure_misid_weight(
+    p_val: float,
+    eta_val: float,
+    ntracks_val: int,
+    pid_effs: Dict[str, bh.Histogram],
+    relative_yields_hist: Union[bh.Histogram, hist.Hist],
+    species: list = [
+        recocat.replace("_like", "") for recocat in config.pid.recocat.keys()
+    ],
+) -> float:
+    """Element-wise weight assignment, accounting for the fact that the per-species abundance and control- and signal-0 efficiecy maps may adopt different binning"""
+    # validate binning of each
+    misid_w = 0.0
+
+    for spc in species:
+        # relative abundance
+        sweight_prefactor = relative_yields_hist[
+            bh.loc(p_val), bh.loc(eta_val), bh.loc(ntracks_val), f"{spc}_yield"
+        ]
+        sw_spc = ufloat(sweight_prefactor.value, sweight_prefactor.variance**0.5)
+
+        # control-channel efficiency
+        ctrl_pideff = pid_effs[f"{spc}_to_antimu"][
+            bh.loc(p_val), bh.loc(eta_val), bh.loc(ntracks_val)
+        ]
+        ctrl_pideff_v = ufloat(ctrl_pideff.value, ctrl_pideff.variance**0.5)
+
+        # signal-channel efficiency
+        sig_pideff = pid_effs[f"{spc}_to_mu"][
+            bh.loc(p_val), bh.loc(eta_val), bh.loc(ntracks_val)
+        ]
+        sig_pideff_v = ufloat(sig_pideff.value, sig_pideff.variance**0.5)
+
+        # linear combination: species-abundance prefactor (+) unfold the control PID eff (+) fold in the signal PID eff
+        misid_w += sw_spc * (1 / ctrl_pideff_v) * sig_pideff_v
+
+        return misid_w.n
+
+
 if __name__ == "__main__":
     # get path to data file
     parser = argparse.ArgumentParser(
@@ -288,11 +291,11 @@ if __name__ == "__main__":
     ).lazy()
 
     # compute misID weights and store into new branch `misid_w`
-    data_updat
-            lambda x: misid_w_hist[
-                bh.loc(x["Mu_plus_P"])e = data.with_columns(
+    data_update = data.with_columns(
         pl.struct(["Mu_plus_P", "Mu_plus_LK_ETA", "nTracks"])
-        .map_elements(,
+        .map_elements(
+            lambda x: misid_w_hist[
+                bh.loc(x["Mu_plus_P"]),
                 bh.loc(x["Mu_plus_LK_ETA"]),
                 bh.loc(x["nTracks"]),
             ].value,

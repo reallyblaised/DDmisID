@@ -26,16 +26,17 @@ import numpy as np
 
 # cleanup after completion
 onsuccess: 
-    shutil.rmtree(".snakemake/metadata")
-    # shutil.rmtree("bin") # cleanup pidcalib efficiencies
-    #shutil.rmtree("obs") # cleanup data partitions
+    shutil.rmtree("workflow/snakemake/metadata")
+    shutil.rmtree("workflow/snakemake/log")
+    # shutil.rmtree("scratch/bin") # cleanup pidcalib efficiencies
+    # shutil.rmtree("scratch/obs") # cleanup data partitions
+    # shutil.rmtree("scratch/templates") # cleanup templates
+    # shutil.rmtree("scratch/postfit") # cleanup postfit data
 
 rule all:
     """Target of the entire DDmisID workflow"""
     input:
-        #"ddmisid.done"
-        "templates.done"
-
+        "ddmisid.done"
     run: 
         print(pyfiglet.figlet_format("misID", font = "isometric1" ))
         print(pyfiglet.figlet_format("done", font = "isometric1" ))
@@ -52,12 +53,12 @@ rule all:
 checkpoint generate_pid_efficiency_scripts:
     """
     Spawn pid-efficiency-extraction (pideffx) jobs as instructed in config YAML file. 
-    Store the resulting bash scripts in a directory tree spawned within /bin/.
+    Store the resulting bash scripts in a directory tree spawned within /scratch/bin/.
     """
     input:
         ".schema/validated_config.json"
     output:
-        pid_efficiency_executable_parent_directory = directory("bin/"),
+        pid_efficiency_executable_parent_directory = directory("scratch/bin/"),
     log:
         "logs/workflow/pideffx_script_generation.log"
     run:
@@ -86,9 +87,9 @@ rule extract_pid_effs:
     Run the pideffx jobs as spawned in the previous step. Tallyt the resulting efficiency histograms.
     """
     input:
-        bash_file = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh",
+        bash_file = "scratch/bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh",
     output:
-        pidcalib_hists = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl",
+        pidcalib_hists = "scratch/bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl",
     log: 
         "logs/workflow/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/pideffx.log"
     run:
@@ -100,9 +101,9 @@ rule process_pid_effs:
     Processing stage to handle negative/null PID efficiencies according to ddmisid.utils.histogram.EfficiencyHistogramProcessor()
     """
     input:
-        pideffh = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl",
+        pideffh = "scratch/bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/perf.pkl",
     output:
-        postprocessed_pideffh = "bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/processed_perf.pkl",
+        postprocessed_pideffh = "scratch/bin/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/processed_perf.pkl",
     log: 
         "logs/workflow/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/process_pideffx.log"
     run:
@@ -160,9 +161,9 @@ checkpoint discretize_data:
     These have all kinematic & occupancy cuts applied, as well has the PID cuts for the hadron-enriched bins specified in the config file.
     """
     input:
-        data = [path for magpols in config.data.input_path.values() for path in magpols.values()][0]
+        data = config.data.input_path,
     output:
-        directory("obs/"),
+        directory("scratch/obs/"),
     log: 
        "logs/workflow/data_discretizer.log" 
     run:
@@ -175,7 +176,7 @@ checkpoint discretize_data:
         for key, prefix in config.data.data_prefixes.items():
             data_branch_prefix = f"{prefix}_" if prefix else ""
             data_binning[f"{data_branch_prefix}{key}"] = config.pid.sweight_binning[
-                pidcalib_alias_factory.process_variable(var=key, year=config.pid.years[0],) # FIXME: correct mappling to years
+                pidcalib_alias_factory.process_variable(var=key, year=config.pid.year) 
             ]
 
         # load data, reading] in only BOI, as will fill obs hist only
@@ -212,8 +213,8 @@ checkpoint discretize_data:
             for axis, index in zip(reco_h.axes[:-1], bin_combination):
                 bin_range = axis[index]
                 bin_name = axis.name
-                bin_label = f"{int(bin_range[0])}-{int(bin_range[1])}" if isinstance(bin_range[0], (int, float)) else f"{bin_range[0]}-{bin_range[1]}"
-                bin_labels.append(f"{bin_name}:{bin_label}")
+                bin_label = f"{bin_range[0]}-{bin_range[1]}" if isinstance(bin_range[0], (int, float)) else f"{bin_range[0]}-{bin_range[1]}"
+                bin_labels.append(f"{bin_label}")
 
             # Generate a directory path from the bin labels
             bin_path = "/".join(bin_labels)
@@ -221,7 +222,7 @@ checkpoint discretize_data:
             # Save the histogram for the current bin combination, projecting out the reco category
             d.save_histogram(
                 hist=reco_h[*bin_combination,...],
-                path=f"obs/{bin_path}/obs.pkl",
+                path=f"scratch/obs/{bin_path}/obs.pkl",
             )
 
 
@@ -260,175 +261,187 @@ checkpoint make_templates:
         pidcalib_done = "pideffx.done",
         data_partitions_done = "data_partitions.done" 
     params:
-        path_prefix = r"bin/2018/up/control", # FIXME: retrieve from config, and deal with magpol
+        path_prefix = r"scratch/bin/2018/up/control", # FIXME: retrieve from config, and deal with magpol
     output: 
-        dir = directory("templates/"),
-        dummy = temp("templates.done"),        
+        dir = directory("scratch/templates/"), 
     run:
         # # init log
-        # rule_logger.add(str(log), level="INFO")
 
         # initialise the template factory
-        template_factory = TemplateFactory()
+        factory = TemplateFactory()
+
 
         # build the templates for each species across all reco partitions
         try:
-            
             for species in [partition[:-len("_like")] if partition.endswith("_like") else partition for partition in config.pid.reco_partitions]:
-                 # Create a template maker for the current species
-                template_maker = TemplateFactory.create_maker(
-                    species, str(params.path_prefix), config.pid.
+
+                # register species-specific kind of template [default: `BinnedTemplate`]
+                factory.register_species(species) 
+
+                # fetch the relevant histograms accross all reco partitions
+                species_template = factory.fetch_template_maker(
+                        species, str(params.path_prefix), config.pid.reco_partitions
                 )
 
-                # Generate the histogram
-                template_maker.make_hist()
+                # build the binned template
+                species_template.make_hist()
 
-                # Save the templates based on the provided binning
-                template_maker.save_templates(config.pid.sweight_binning)
+                # save the histogram in a directory tree spawned from `scratch/templates`
+                species_template.save_hist(config.pid.sweight_binning, "scratch/templates")
 
         except Exception as e:
             # Capture any error and log it
             #rule_logger.error(f"Error during template creation: {e}")
             raise e
-        
-        # signal completion
-        with open(output.dummy, "w") as f:
-            f.write("templates.done")
 
 
 rule bml_fit: 
     input:
         # templates
         pion_template = lambda wildcards: [
-            "templates/{p}/{eta}/{ntracks}/{species}.pkl".\
+            "scratch/templates/{p}/{eta}/{ntracks}/{species}.pkl".\
             format(p=wildcards.p, eta=wildcards.eta, ntracks=wildcards.ntracks, species="pion")
         ],
         kaon_template = lambda wildcards: [
-            "templates/{p}/{eta}/{ntracks}/{species}.pkl".\
+            "scratch/templates/{p}/{eta}/{ntracks}/{species}.pkl".\
             format(p=wildcards.p, eta=wildcards.eta, ntracks=wildcards.ntracks, species="kaon")
         ],
         proton_template = lambda wildcards: [
-            "templates/{p}/{eta}/{ntracks}/{species}.pkl".\
+            "scratch/templates/{p}/{eta}/{ntracks}/{species}.pkl".\
             format(p=wildcards.p, eta=wildcards.eta, ntracks=wildcards.ntracks, species="proton")
         ],
         electron_template = lambda wildcards: [
-            "templates/{p}/{eta}/{ntracks}/{species}.pkl".\
+            "scratch/templates/{p}/{eta}/{ntracks}/{species}.pkl".\
             format(p=wildcards.p, eta=wildcards.eta, ntracks=wildcards.ntracks, species="electron")
         ],
         # ghost_template = lambda wildcards: [
-        #     "templates/{p}/{eta}/{ntracks}/{species}.pkl".\
+        #     "scratch/templates/{p}/{eta}/{ntracks}/{species}.pkl".\
         #     format(p=wildcards.p, eta=wildcards.eta, ntracks=wildcards.ntracks, species="ghost")
         # ],
         # observations
         obs = lambda wildcards: [
-            "obs/{p}/{eta}/{ntracks}/obs.pkl".\
+            "scratch/obs/{p}/{eta}/{ntracks}/obs.pkl".\
             format(p=wildcards.p, eta=wildcards.eta, ntracks=wildcards.ntracks) 
         ],
     params:
-        executable = "ddmisid/fit_reco.py"
+        executable = "ddmisid/snakemake/fit_reco.py"
     log: 
         "logs/workflow/{p}/{eta}/{ntracks}/bml_fit.log"
     output:
         # true abundance of each species, accounting for cross-contamination between reco bins
-        "postfit/{p}/{eta}/{ntracks}/yields.pkl",
+        "scratch/postfit/{p}/{eta}/{ntracks}/yields.pkl",
     run:
+        # shell("python {params.executable}\
+        #     --pion {input.pion_template}\
+        #     --kaon {input.kaon_template}\
+        #     --proton {input.proton_template}\
+        #     --electron {input.electron_template}\
+        #     --ghost {input.ghost_template}\
+        #     --obs {input.obs} &> {log}" 
+        # )
         shell("python {params.executable}\
             --pion {input.pion_template}\
             --kaon {input.kaon_template}\
             --proton {input.proton_template}\
             --electron {input.electron_template}\
-            --ghost {input.ghost_template}\
             --obs {input.obs} &> {log}" 
         )
 
-
-def hadron_enriched_abundances(wildcards):
+def control_species_abundances(wildcards):
     """Book the desired process outcome out of the checkpoint, so to be able to use wildcards to enact the fit"""
     checkpoint_output = checkpoints.make_templates.get(**wildcards).output[0]
     p = list(set(glob_wildcards(os.path.join(checkpoint_output, '{p}/{eta}/{ntracks}/{species}.pkl')).p))
     eta = list(set(glob_wildcards(os.path.join(checkpoint_output, '{p}/{eta}/{ntracks}/{species}.pkl')).eta))
     ntracks = list(set(glob_wildcards(os.path.join(checkpoint_output, '{p}/{eta}/{ntracks}/{species}.pkl')).ntracks))
     
-    return expand("postfit/{p}/{eta}/{ntracks}/yields.pkl", p=p, eta=eta, ntracks=ntracks)
+    return expand("scratch/postfit/{p}/{eta}/{ntracks}/yields.pkl", p=p, eta=eta, ntracks=ntracks)
 
 
 rule build_relative_abundance_lookup_table:
     """Build a histogram of the N_i/N_ref, per species, across all bins of kinematics and occupancy"""
     input:
-        hadron_enriched_abundances
+        control_species_abundances
     params: 
-        executable = "ddmisid/collect_yields.py"
+        executable = "ddmisid/snakemake/collect_yields.py"
     output:
-        "postfit/rel_abundances_hist.pkl", # global histogram; a lookup table in {species, kinematics, occupancy} -> N_i/N_ref
+        "scratch/postfit/rel_abundances_hist.pkl", # global histogram; a lookup table in {species, kinematics, occupancy} -> N_i/N_ref
     run:
         shell("python {params.executable} --input {input} --output {output}")
 
 
-# # =====================================================================================================================
-# #                                       Extrapolation to Signal Region Section
-# # ---------------------------------------------------------------------------------------------------------------------
-# #   - Source the relative true abundance of each species in the control sample  
-# #   - Extract misID weight through the linear combination of the above and eff(h->mu), unfolding eff(!isMuon & PIDmu<0)
-# # =====================================================================================================================
-# def fetch_pid_eff_sp_id(_dllmu_bin, _species, partition=None, _magpol="up"): # FIXME: expand to both magpol
-#     def fetch_eff(wildcards):
-#         '''
-#         Collect the variable number of sub-directories produced by setup.py that live in /exec/,
-#         and expand to use perfHists.root files produced by PIDCalib2
-#         '''
-#         checkpoint_output = checkpoints.generate_pid_efficiency_scripts.get(**wildcards).output[0]
-        
-#         year, eff_dirs = glob_wildcards(os.path.join(checkpoint_output, '{year}/'+_magpol+'/'+_dllmu_bin+'/'+_species+'/{eff_dirs}/run.sh'))
-        
-#         # care in handling the inclusive !muon species-specific efficiency histogram
-#         match partition:
-#             case None:
-#                 return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/processed_perf.pkl", zip, year=year, magpol=_magpol, dllmu_bin=_dllmu_bin, species=_species, eff_dirs=eff_dirs)
-#             case _: 
-#                 return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/processed_perf.pkl", zip, year=year, magpol=_magpol, dllmu_bin=_dllmu_bin, species=_species, eff_dirs=partition) # user-defined `eff_dirs`
+# =====================================================================================================================
+#                                       Extrapolation to Signal Region Section
+# ---------------------------------------------------------------------------------------------------------------------
+#   - Source the relative true abundance of each species in the control sample  
+#   - Extract misID weight through the linear combination of the above and eff(h->mu), unfolding eff(!isMuon & PIDmu<0)
+# =====================================================================================================================
+def fetch_pid_eff_sp_id(_pid_region, _species, partition=None): # FIXME: expand to both magpol
+    def fetch_eff(wildcards):
+        '''
+        Collect the PID maps generated upstream in the workflow
+        '''
+        checkpoint_output = checkpoints.generate_pid_efficiency_scripts.get(**wildcards).output[0]
+        year, magpol, eff_dirs = glob_wildcards(os.path.join(checkpoint_output, '{year}/{magpol}/'+_pid_region+'/'+_species+'/{eff_dirs}/run.sh'))
+
+        # care in handling the inclusive !muon species-specific efficiency histogram
+        match partition:
+            case None:
+                return expand(checkpoint_output+"/{year}/{magpol}/{pid_region}/{species}/{eff_dirs}/processed_perf.pkl", zip, year=year, magpol=magpol, pid_region=_pid_region, species=_species, eff_dirs=eff_dirs)
+            case _: 
+                return expand(checkpoint_output+"/{year}/{magpol}/{pid_region}/{species}/{eff_dirs}/processed_perf.pkl", zip, year=year, magpol=magpol, pid_region=_pid_region, species=_species, eff_dirs=partition) # user-defined `eff_dirs`
     
-#     return fetch_eff
+    return fetch_eff
+
+# def aggregate_pid_effs(wildcards):
+#     '''
+#     Collect the variable number of sub-directories spawned by PIDEffX(), and post-processed efficiency histograms therein.
+#     '''
+#     checkpoint_output = checkpoints.generate_pid_efficiency_scripts.get(**wildcards).output[0]
+#     year, magpol, dllmu_bin, species, eff_dirs = glob_wildcards(os.path.join(checkpoint_output, '{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/run.sh'))
+
+#     return expand(checkpoint_output+"/{year}/{magpol}/{dllmu_bin}/{species}/{eff_dirs}/processed_perf.pkl", zip, year=year, magpol=magpol, dllmu_bin=dllmu_bin, species=species, eff_dirs=eff_dirs)
 
 
-# # for magpol in ["up", "down"]: FIXME: need to expand to include magpol variety
-# rule extract_misid_weights: 
-#     """
-#     In each bin of kinematics and occupancy, perform the weighted sum of the c_i * eff(h_i->mu)/eff(!isMuon & PIDmu<0), 
-#     where c_i is the true abundance of each species in that bin of hadron-enriched control data.
-#     That is, unfold the efficiency related to isolating the hadron-enriched control sample as a whole, and fold back in the 
-#     species-specific misID efficiency driving the h->mu pollution in the signal channel.
-#     """
-#     input:
-#         # $N_i/N_{\mathrm{ref}}$ for each species 
-#         # ---------------------------------------
-#         relative_true_abundances = "postfit/rel_abundances_hist.pkl",
-#         # eff(h->mu) for each species
-#         # -----------------------------
-#         pion_to_mu_eff = fetch_pid_eff_sp_id("mu_id", "pion"),
-#         electron_to_mu_eff = fetch_pid_eff_sp_id("mu_id", "electron"),
-#         kaon_to_mu_eff = fetch_pid_eff_sp_id("mu_id", "kaon"),
-#         proton_to_mu_eff = fetch_pid_eff_sp_id("mu_id", "proton"),
-#         # FIXME: ghosts
-#         # species-specific PID efficiencies for h \in hadron-enriched-dataset [no partitions required]
-#         # --------------------------------------------------------------------------------------------
-#         proton_to_antimu_eff = fetch_pid_eff_sp_id("antimu_id", "proton", "all"), # all signifies in {!isMuon & DLLmu<0}
-#         kaon_to_antimu_eff = fetch_pid_eff_sp_id("antimu_id", "kaon", "all"),
-#         pion_to_antimu_eff = fetch_pid_eff_sp_id("antimu_id", "pion", "all"),
-#         electron_to_antimu_eff = fetch_pid_eff_sp_id("antimu_id", "electron", "all"),
-#         # FIXME: global_antimuon_eff_ghosts = fetch_pid_eff_sp_id("antimu_id", "proton", "all"),
-#         # hadron-enriched data, to which we want to assign weights
-#         # --------------------------------------------------------
-#         hadron_enriched_data = config["data"]["input_path"]
-#     params:
-#         executable = "ddmisid/assign_w_misid.py",
-#         root_key = config['data']['root_config']['root_key'],
-#         root_tree_name = config['data']['root_config']['root_tree_name'],
-#         outfile_path = config['data']['output_path']
-#     output:
-#         temp("ddmisid.done") # signal completion
-#     run:
-#         shell("python {params.executable} --rel_abundances {input.relative_true_abundances} --obs {input.hadron_enriched_data}\
-#         --proton_to_mu {input.proton_to_mu_eff} --pion_to_mu {input.pion_to_mu_eff} --kaon_to_mu {input.kaon_to_mu_eff} --electron_to_mu {input.electron_to_mu_eff}\
-#         --proton_to_antimu {input.proton_to_antimu_eff} --pion_to_antimu {input.pion_to_antimu_eff} --kaon_to_antimu {input.kaon_to_antimu_eff} --electron_to_antimu {input.electron_to_antimu_eff}\
-#         --output {params.outfile_path} --key {params.root_key} --tree {params.root_tree_name} \
-#         && touch {output}") # temporary signal file only if main executable has run successfully
+
+# for magpol in ["up", "down"]: FIXME: need to expand to include magpol variety
+rule extract_misid_weights: 
+    """
+    In each bin of kinematics and occupancy, perform the weighted sum of the c_i * eff(h_i->mu)/eff(!isMuon & PIDmu<0), 
+    where c_i is the true abundance of each species in that bin of hadron-enriched control data.
+    That is, unfold the efficiency related to isolating the hadron-enriched control sample as a whole, and fold back in the 
+    species-specific misID efficiency driving the h->mu pollution in the signal channel.
+    """
+    input:
+        # $N_i/N_{\mathrm{ref}}$ for each species 
+        # ---------------------------------------
+        relative_true_abundances = "scratch/postfit/rel_abundances_hist.pkl",
+        # eff(h->mu) for each species
+        # -----------------------------
+        pion_to_mu_eff = fetch_pid_eff_sp_id("target", "pion"),
+        electron_to_mu_eff = fetch_pid_eff_sp_id("target", "electron"),
+        kaon_to_mu_eff = fetch_pid_eff_sp_id("target", "kaon"),
+        proton_to_mu_eff = fetch_pid_eff_sp_id("target", "proton"),
+        # FIXME: ghosts missing
+        # species-specific PID efficiencies for h \in hadron-enriched-dataset [no partitions required]
+        # --------------------------------------------------------------------------------------------
+        proton_to_antimu_eff = fetch_pid_eff_sp_id("control", "proton", "proton_to_control_like"), # all signifies in {!isMuon & DLLmu<0}
+        kaon_to_antimu_eff = fetch_pid_eff_sp_id("control", "kaon", "kaon_to_control_like"),
+        pion_to_antimu_eff = fetch_pid_eff_sp_id("control", "pion", "pion_to_control_like"),
+        electron_to_antimu_eff = fetch_pid_eff_sp_id("control", "electron", "electron_to_control_like"),
+        # FIXME: global_antimuon_eff_ghosts = fetch_pid_eff_sp_id("control", "ghost", "control"),
+        # hadron-enriched data, to which we want to assign weights
+        # --------------------------------------------------------
+        hadron_enriched_data = config.data.input_path
+    params:
+        executable = "ddmisid/snakemake/assign_w_misid.py",
+        root_key = config.data.data_key,
+        root_tree_name = config.data.data_tree,
+        outfile_path = config.data.output_path
+    output:
+        temp("ddmisid.done") # signal completion
+    run:
+        shell("python {params.executable} --rel_abundances {input.relative_true_abundances} --obs {input.hadron_enriched_data}\
+        --proton_to_mu {input.proton_to_mu_eff} --pion_to_mu {input.pion_to_mu_eff} --kaon_to_mu {input.kaon_to_mu_eff} --electron_to_mu {input.electron_to_mu_eff}\
+        --proton_to_antimu {input.proton_to_antimu_eff} --pion_to_antimu {input.pion_to_antimu_eff} --kaon_to_antimu {input.kaon_to_antimu_eff} --electron_to_antimu {input.electron_to_antimu_eff}\
+        --output {params.outfile_path} --key {params.root_key} --tree {params.root_tree_name} \
+        && touch {output}") # temporary signal file only if main executable has run successfully

@@ -3,7 +3,8 @@ import pickle
 import argparse
 from typing import Optional, Callable, Any
 import pyhf.workspace
-from ddmisid import load_hist, data_pull_plot, make_binning, make_legend
+from ddmisid.utils import load_hist 
+from ddmisid.utils.plot import make_legend, data_pull_plot
 from pathlib import Path
 import numpy as np
 import cabinetry
@@ -83,17 +84,10 @@ def build_sample_spec(
                 template_name = r"ghost"
             # if there is something to load, do it
             _template_h = load_hist(template)
-            # build the samples
-            if np.any(_template_h.view().value): # at least one non-zero bin entry
-                samples.append(
+            # build the samples, post-processed # at least one non-zero bin entry
+            samples.append(
                     build_template_spec(template_name, 
                         list(_template_h.view().value / np.sum(_template_h.view().value)) # normalise to unity                   
-                )
-            )
-            else: # empty - fill with placeholder small template bin contents
-                samples.append(
-                    build_template_spec(template_name, 
-                        list(np.array([1e-6 for val in _template_h.view().value]) / np.sum([1e-6 for val in _template_h.view().value])) # dummy value to avoid 0.0, aiding the NLL minimisation but still normalised to unity           
                 )
             )
     return samples
@@ -112,18 +106,18 @@ def build_channel_spec(
     schema = {
         "channels": [
             {
-                "name": "Hadron-enriched data",
+                "name": "Control-channel data",
                 "samples": build_sample_spec(
                     proton_template,
                     pion_template,
                     kaon_template,
                     electron_template,
-                    ghost_template,
+                    # ghost_template,
                 ),
             }
         ],
         "observations":[
-            {"name": "Hadron-enriched data", "data": observations} 
+            {"name": "Control-channel data", "data": observations[:4]} # FIXME: ignore ghosts
         ],
         "measurements": [
             {
@@ -151,11 +145,11 @@ def build_channel_spec(
                         "bounds": [[0.0, np.sum(observations)]],
                         "inits": [np.sum(observations)/10.0] # initialise at 10% of the data   
                     },
-                    {
-                        "name": "ghost_yield",
-                        "bounds": [[0.0, np.sum(observations)]],
-                        "inits": [np.sum(observations)/10.0] # initialise at 10% of the data   
-                    },
+                    # {
+                    #     "name": "ghost_yield",
+                    #     "bounds": [[0.0, np.sum(observations)]],
+                    #     "inits": [np.sum(observations)/10.0] # initialise at 10% of the data   
+                    # },
                 ]}
             }
         ],
@@ -202,10 +196,12 @@ if __name__ == "__main__":
 
     # having built the workspace in pyhf, use cabinetry to fit and viz
     model, data = cabinetry.model_utils.model_and_data(workspace)
+    print(json.dumps(model.spec, indent=2)) # verbose
+    
     fit_results = cabinetry.fit.fit(model, data, custom_fit=True) # use iminuit directly
     model_pred_postfit = cabinetry.model_utils.prediction(model, fit_results=fit_results)
     # print fit results
-    postfit_info = cabinetry.tabulate.yields(model_pred_postfit, data) 
+    postfit_info = cabinetry.tabulate.yields(model_pred_postfit, data, save_tables=False) 
 
     # persist the results, normalised to the observation -> Ni/Nref (prefactors in the linear combination of efficiencies in the extrapolation)
     # -----------------------------------------------------------------------------------------------------------------------------------------
@@ -238,7 +234,7 @@ if __name__ == "__main__":
     ) # unweighted
 
     # sanity checks - inspect the compatibility (assume ghosts are the last entry)
-    _obs = load_hist(opts.obs)
+    _obs = load_hist(opts.obs)[:4] # FIXME: ignore ghosts
     assert _obs.view().all() == obs.all()
 
     # book canvas
@@ -359,7 +355,8 @@ if __name__ == "__main__":
 
     # legend
     handles, labels = ax.get_legend_handles_labels()
-    order =[0, 1, 3, 4, 5, 2, 6] # order of legend
+    #order =[0, 1, 3, 4, 5, 2, 6] # order of legend
+    order =[0, 1, 2, 3, 4, 5] # order of legend # FIXME: ignore ghosts
     ax.legend(
         [handles[idx] for idx in order], [labels[idx] for idx in order],    
         loc='center left', bbox_to_anchor=(1, 0.5)

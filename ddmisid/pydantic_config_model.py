@@ -21,8 +21,8 @@ class PIDConfig(BaseModel):
         ...,
         description="User-defined species alias for use within DDmisID : PIDCalib2 species name (e.g., electron: e_B_Jpsi)",
     )
-    years: List[str] = Field(..., description="Data-taking years")
-    magpols: List[str] = Field(..., description="Magnet polarities")
+    year: str = Field(..., description="Data-taking years")
+    magpol: str = Field(..., description="Magnet polarities")
     control: str = Field(..., description="PID selection for control region")
     target: str = Field(..., description="PID selection for target region")
     common_selection: Optional[str] = Field(
@@ -37,10 +37,20 @@ class PIDConfig(BaseModel):
         ..., description="Configuration for the ghost candidates"
     )
 
+    # year either of Run 1 or Run 2
+    @validator("year")
+    def validate_year(cls, value):
+        allowed_years = ("2011", "2012", "2015", "2016", "2017", "2018")
+        if value not in allowed_years:
+            raise ValueError(
+                f"Invalid year of data taking: {value}. Allowed values are '2011', '2012', '2015', '2016', '2017', '2018'."
+            )
+        return value
+
     # magpol in ["up", "down"]
-    @validator("magpols", each_item=True)
-    def validate_magpols(cls, value):
-        allowed_magpols = {"up", "down"}
+    @validator("magpol")
+    def validate_magpol(cls, value):
+        allowed_magpols = ("up", "down")
         if value not in allowed_magpols:
             raise ValueError(
                 f"Invalid magnet polarity: {value}. Allowed values are 'up' or 'down'."
@@ -62,9 +72,7 @@ class PIDConfig(BaseModel):
 class DataConfig(BaseModel):
     """Data configuration for DDmisID."""
 
-    input_path: Dict[str, Union[str, Dict[str, str]]] = Field(
-        ..., description="Path to the input data file"
-    )
+    input_path: str = Field(..., description="Path to the input data file")
     data_key: Optional[str] = Field(
         None, description="Key for the data tree in the input file"
     )

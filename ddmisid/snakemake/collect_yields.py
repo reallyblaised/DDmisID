@@ -4,18 +4,14 @@ Collect all species-specific yields across all bins of kinematics and occupancy 
 
 import itertools
 import hist
-from ddmisid.utils import read_config, load_ntuple, extract_sel_dict_branches
+from ddmisid.engine import config
+from ddmisid.utils import load_hist, load_root, extract_sel_dict_branches
 from pathlib import Path
 import argparse
 import pickle
 import hist
 from hist import Hist
 import numpy as np
-
-
-def open_pkl(input: str):
-    with open(input, "rb") as f:
-        return pickle.load(f)
 
 
 def pairwise(iterable):
@@ -26,7 +22,7 @@ def pairwise(iterable):
 
 
 # Generate file paths
-def generate_path(p_bin, r_bin, n_bin, base_dir="postfit"):
+def generate_path(p_bin, r_bin, n_bin, base_dir="scratch/postfit"):
     return f"{base_dir}/{p_bin[0]}-{p_bin[1]}/{r_bin[0]}-{r_bin[1]}/{n_bin[0]}-{n_bin[1]}/yields.pkl"
 
 
@@ -57,12 +53,11 @@ if __name__ == "__main__":
     #     storage=Weight()
     # )
     # NOTE: as this matches the config file spec, follow this for consistency
-    data = open_pkl(
+    data = load_hist(
         opts.input[0]
     )  # open first yields file to fetch the keys in the right order
-    pidcalib_keys, pidcalib_values = zip(
-        *read_config("config/main.yml", key="pid")["binning"].items()
-    )
+
+    pidcalib_keys, pidcalib_values = zip(*config.pid.sweight_binning.items())
     hist4D = (
         Hist.new.Variable(pidcalib_values[0], name=pidcalib_keys[0])
         .Variable(pidcalib_values[1], name=pidcalib_keys[1])
@@ -81,7 +76,7 @@ if __name__ == "__main__":
         for j, _ in enumerate(_eta_bins):  # eta
             for k, _ in enumerate(_n_bins):  # multiplicity
                 for species in data.keys():
-                    yields = open_pkl(
+                    yields = load_hist(
                         generate_path(_p_bins[i], _eta_bins[j], _n_bins[k])
                     )
                     hist4D[i, j, k, species] = [

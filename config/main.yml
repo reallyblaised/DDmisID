@@ -38,8 +38,8 @@ pid:
     electron: "e_B_Jpsi"
   
   # year-specific configuration
-  years : ["2018"] 
-  magpols : ["up"] # follow pidcalib2 syntax
+  year: "2018" 
+  magpol: "up" # follow pidcalib2 syntax
   
   # PIDCALIB section: adopt pidcalib syntax to extract efficiencies from calibration data
   # =====================================================================================
@@ -94,9 +94,7 @@ pid:
 data: 
   # file/directory/tree coordinates
   # ------------------------------ 
-  input_path:  
-    "2018": 
-      up: "/ceph/submit/data/user/b/blaised/trex/hadron_enriched/butojpsik_mm_data_MU_2018.root" # path to hadron-enriched data file (pid + intermediate selection applied)
+  input_path: "/ceph/submit/data/user/b/blaised/trex/hadron_enriched/butojpsik_mm_data_MU_2018.root" # path to hadron-enriched data file (pid + intermediate selection applied)
   data_key: ~
   data_tree: "DecayTree"
   output_path: "/work/submit/blaised/DDmisID/misid_w/fakemuon_2018_MU.root" # path to hadron-enriched data file (pid + intermediate selection applied)
