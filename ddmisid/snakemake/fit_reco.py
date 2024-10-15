@@ -385,7 +385,7 @@ if __name__ == "__main__":
     order =[0, 1, 2, 3, 4, 5] # order of legend # FIXME: ignore ghosts
     ax.legend(
         # [handles[idx] for idx in order], [labels[idx] for idx in order],    
-        # loc='center left', bbox_to_anchor=(1, 0.5)
+        loc='center left', bbox_to_anchor=(1, 0.5)
     )
     ax.set_ylim(bottom=0.0)
     ax.ticklabel_format(style='scientific', axis='y', scilimits=(0,0))  # Force scientific notation

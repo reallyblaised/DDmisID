@@ -302,10 +302,10 @@ rule bml_fit:
             "scratch/templates/{p}/{eta}/{ntracks}/{species}.pkl".\
             format(p=wildcards.p, eta=wildcards.eta, ntracks=wildcards.ntracks, species="pion")
         ],
-        kaon_template = lambda wildcards: [
-            "scratch/templates/{p}/{eta}/{ntracks}/{species}.pkl".\
-            format(p=wildcards.p, eta=wildcards.eta, ntracks=wildcards.ntracks, species="kaon")
-        ],
+        # kaon_template = lambda wildcards: [
+        #     "scratch/templates/{p}/{eta}/{ntracks}/{species}.pkl".\
+        #     format(p=wildcards.p, eta=wildcards.eta, ntracks=wildcards.ntracks, species="kaon")
+        # ],
         muon_template = lambda wildcards: [
             "scratch/templates/{p}/{eta}/{ntracks}/{species}.pkl".\
             format(p=wildcards.p, eta=wildcards.eta, ntracks=wildcards.ntracks, species="muon")
@@ -336,7 +336,6 @@ rule bml_fit:
         "scratch/postfit/{p}/{eta}/{ntracks}/yields.pkl",
     run:
         shell("python {params.executable}\
-            --kaon {input.kaon_template}\
             --pion {input.pion_template}\
             --muon {input.muon_template}\
             --proton {input.proton_template}\
@@ -416,14 +415,14 @@ rule extract_misid_weights:
         # -----------------------------
         pion_to_mu_eff = fetch_pid_eff_sp_id("target", "pion"),
         electron_to_mu_eff = fetch_pid_eff_sp_id("target", "electron"),
-        kaon_to_mu_eff = fetch_pid_eff_sp_id("target", "kaon"),
+        #kaon_to_mu_eff = fetch_pid_eff_sp_id("target", "kaon"),
         muon_to_mu_eff = fetch_pid_eff_sp_id("target", "muon"),
         proton_to_mu_eff = fetch_pid_eff_sp_id("target", "proton"),
         # FIXME: ghosts missing
         # species-specific PID efficiencies for h \in hadron-enriched-dataset [no partitions required]
         # --------------------------------------------------------------------------------------------
         proton_to_antimu_eff = fetch_pid_eff_sp_id("control", "proton", "proton_to_control_like"), # all signifies in {!isMuon & DLLmu<0}
-        kaon_to_antimu_eff = fetch_pid_eff_sp_id("control", "kaon", "kaon_to_control_like"),
+        #kaon_to_antimu_eff = fetch_pid_eff_sp_id("control", "kaon", "kaon_to_control_like"),
         muon_to_antimu_eff = fetch_pid_eff_sp_id("control", "muon", "muon_to_control_like"),
         pion_to_antimu_eff = fetch_pid_eff_sp_id("control", "pion", "pion_to_control_like"),
         electron_to_antimu_eff = fetch_pid_eff_sp_id("control", "electron", "electron_to_control_like"),
@@ -440,7 +439,7 @@ rule extract_misid_weights:
         temp("ddmisid.done") # signal completion
     run:
         shell("python {params.executable} --rel_abundances {input.relative_true_abundances} --obs {input.hadron_enriched_data}\
-        --proton_to_mu {input.proton_to_mu_eff} --kaon_to_mu {input.kaon_to_mu_eff}  --pion_to_mu {input.pion_to_mu_eff} --muon_to_mu {input.muon_to_mu_eff} --electron_to_mu {input.electron_to_mu_eff}\
-        --proton_to_antimu {input.proton_to_antimu_eff} --kaon_to_antimu {input.kaon_to_antimu_eff} --pion_to_antimu {input.pion_to_antimu_eff} --muon_to_antimu {input.muon_to_antimu_eff} --electron_to_antimu {input.electron_to_antimu_eff}\
+        --proton_to_mu {input.proton_to_mu_eff} --pion_to_mu {input.pion_to_mu_eff} --muon_to_mu {input.muon_to_mu_eff} --electron_to_mu {input.electron_to_mu_eff}\
+        --proton_to_antimu {input.proton_to_antimu_eff} --pion_to_antimu {input.pion_to_antimu_eff} --muon_to_antimu {input.muon_to_antimu_eff} --electron_to_antimu {input.electron_to_antimu_eff}\
         --output {params.outfile_path} --key {params.root_key} --tree {params.root_tree_name} \
         && touch {output}") # temporary signal file only if main executable has run successfully
