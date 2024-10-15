@@ -228,10 +228,14 @@ class ParticleRecoPartitionJobGenerator(JobSetter, MCTuningSetterMixin):
         for partition_label, partition_pid_criteria in self.reco_partitions.items():
 
             # Set PID cut for each partition, accounting for MC tuning setting, if needed
-            pid_cut = partition_pid_criteria
+            pid_cut = self.assign_mc_tuning(
+                year=year,
+                pid_selection=f"{partition_pid_criteria} & {self.control_pid_selection}",
+            )
+            # common cuts for hadron-enriched sample
             hadron_enriched_selection = self.assign_mc_tuning(
                 year=year,
-                pid_selection=f"{self.control_pid_selection} & {self.common_selection}",
+                pid_selection=f"{self.common_selection}",
             )
 
             # Setup binning variables
