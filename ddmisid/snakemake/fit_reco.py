@@ -13,11 +13,17 @@ import matplotlib.pyplot as plt
 from uncertainties import ufloat, ufloat_fromstr
 import json
 import matplotlib.patches as patches
+from ddmisid.engine import config
 
 plt.style.use(["science", "no-latex"])
 cabinetry.set_logging()
 
 USE_PULLS = True
+# source from config the user-specified partitions for which templates are available
+SPECIES = [
+    recocat.replace("_like", "") for recocat in config.pid.reco_partitions.keys()
+]
+
 
 def assign_reco_labels(categories: list, include_ghosts: bool = True) -> list:
     """Assign reco labels to the categories"""
@@ -28,6 +34,7 @@ def assign_reco_labels(categories: list, include_ghosts: bool = True) -> list:
             case "pion": labels.append(r"$\pi$")
             case "proton": labels.append(r"$p$")
             case "electron": labels.append(r"$e$")
+            case "muon": labels.append(r"$\mu$")
             case "ghost": 
                 if include_ghosts:
                     labels.append(r"g")
@@ -65,11 +72,12 @@ def build_sample_spec(
     pion_template:  Path | str | None = None,
     kaon_template:  Path | str | None = None,
     electron_template:  Path | str | None = None,
+    muon_template:  Path | str | None = None,
     ghost_template:  Path | str | None = None,
 )->list:
     """Build the schema for the BML fit to hadron-enriched data"""
     samples = []
-    for template in [proton_template, pion_template, kaon_template, electron_template, ghost_template]:
+    for template in [proton_template, pion_template, kaon_template, electron_template, muon_template, ghost_template]:
         if template is not None:
             # assign label
             if template==proton_template:
@@ -78,6 +86,8 @@ def build_sample_spec(
                 template_name = f"pion"
             elif template==kaon_template:
                 template_name = r"kaon"
+            elif template==muon_template:
+                template_name = r"muon"
             elif template==electron_template:
                 template_name = r"electron"
             elif template==ghost_template:
@@ -90,6 +100,7 @@ def build_sample_spec(
                         list(_template_h.view().value / np.sum(_template_h.view().value)) # normalise to unity                   
                 )
             )
+
     return samples
 
 
@@ -98,26 +109,29 @@ def build_channel_spec(
     proton_template: Optional[list] = None,
     pion_template: Optional[list] = None,
     kaon_template: Optional[list] = None,
+    muon_template: Optional[list] = None,
     electron_template: Optional[list] = None,
     ghost_template: Optional[list] = None,
 )->object:
     """Build the schema for the channel"""
-    observations = list(load_hist(obs).view())
+
+    observations = list(load_hist(obs)[SPECIES].view())
     schema = {
         "channels": [
             {
                 "name": "Control-channel data",
                 "samples": build_sample_spec(
-                    proton_template,
-                    pion_template,
-                    kaon_template,
-                    electron_template,
-                    # ghost_template,
+                    proton_template=proton_template,
+                    pion_template=pion_template,
+                    kaon_template=kaon_template,
+                    electron_template=electron_template,
+                    muon_template=muon_template,
+                    #ghost_template=ghost_template,
                 ),
             }
         ],
         "observations":[
-            {"name": "Control-channel data", "data": observations[:4]} # FIXME: ignore ghosts
+            {"name": "Control-channel data", "data": observations} 
         ],
         "measurements": [
             {
@@ -127,6 +141,11 @@ def build_channel_spec(
                     # bounds on floating normalisations
                     {
                         "name": "proton_yield",
+                        "bounds": [[0.0, np.sum(observations)]],
+                        "inits": [np.sum(observations)/10.0] # initialise at 10% of the data   
+                    },
+                    {
+                        "name": "muon_yield",
                         "bounds": [[0.0, np.sum(observations)]],
                         "inits": [np.sum(observations)/10.0] # initialise at 10% of the data   
                     },
@@ -176,7 +195,10 @@ if __name__ == "__main__":
         "--kaon", help="path to kaon template", default=None
     )
     parser.add_argument(
-        "--electron", help="path to muon electron", default=None
+        "--electron", help="path to electron template", default=None
+    )
+    parser.add_argument(
+        "--muon", help="path to muon template", default=None
     )
     parser.add_argument(
         "--ghost", help="path to muon ghost", default=None
@@ -190,6 +212,7 @@ if __name__ == "__main__":
         proton_template = opts.proton,
         pion_template = opts.pion,
         kaon_template = opts.kaon,
+        muon_template = opts.muon,
         electron_template = opts.electron,
         ghost_template = opts.ghost,
     ) 
@@ -223,6 +246,7 @@ if __name__ == "__main__":
         "proton": "#225ea8",
         "pion": "#1d91c0",
         "kaon": "#7fcdbb",
+        "muon": "#41b6c4",
         "electron": "#edf8b1",
         "ghost": "#081d58",
     }
@@ -234,7 +258,7 @@ if __name__ == "__main__":
     ) # unweighted
 
     # sanity checks - inspect the compatibility (assume ghosts are the last entry)
-    _obs = load_hist(opts.obs)[:4] # FIXME: ignore ghosts
+    _obs = load_hist(opts.obs)[SPECIES]
     assert _obs.view().all() == obs.all()
 
     # book canvas
@@ -260,10 +284,12 @@ if __name__ == "__main__":
     bottom = np.zeros(len(obs))
     for s_idx in range(len(postfit_info['yields_per_bin'])):
         category = postfit_info['yields_per_bin'][s_idx]['sample']
+
         match category: 
             case 'proton': cosmetics = {'color' : colors['proton'], 'edgecolor' : colors['proton'], 'label' : r"$p$"}
             case 'pion': cosmetics = {'color' : colors['pion'], 'edgecolor' : colors['pion'], 'label' : r"$\pi$"}
             case 'kaon': cosmetics = {'color' : colors['kaon'], 'edgecolor' : colors['kaon'], 'label' : r"$K$"}
+            case 'muon': cosmetics = {'color' : colors['muon'], 'edgecolor' : colors['muon'], 'label' : r"$\mu$"}
             case 'electron': cosmetics = {'color' : colors['electron'], 'edgecolor' : colors['electron'], 'label' : r"$e$"}
             case 'ghost': cosmetics = {'color' : colors['ghost'], 'edgecolor' : colors['ghost'], 'label' : r"g"}
             case 'total': cosmetics = {'edgecolor': '#b10026', 'label' : 'Model', 'facecolor' : None}
@@ -358,8 +384,8 @@ if __name__ == "__main__":
     #order =[0, 1, 3, 4, 5, 2, 6] # order of legend
     order =[0, 1, 2, 3, 4, 5] # order of legend # FIXME: ignore ghosts
     ax.legend(
-        [handles[idx] for idx in order], [labels[idx] for idx in order],    
-        loc='center left', bbox_to_anchor=(1, 0.5)
+        # [handles[idx] for idx in order], [labels[idx] for idx in order],    
+        # loc='center left', bbox_to_anchor=(1, 0.5)
     )
     ax.set_ylim(bottom=0.0)
     ax.ticklabel_format(style='scientific', axis='y', scilimits=(0,0))  # Force scientific notation

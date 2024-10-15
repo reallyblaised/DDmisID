@@ -6,6 +6,7 @@ from ddmisid.pid.species_strategy import (
     PionStrategy,
     ProtonStrategy,
     ElectronStrategy,
+    MuonStrategy,
     GhostStrategy,
 )
 from ddmisid.engine import config
@@ -58,12 +59,13 @@ class PIDEffXJobFactory:
             case "proton": return ProtonStrategy(), ParticleJobGenerator, ParticleRecoPartitionJobGenerator
             case "kaon": return KaonStrategy(), ParticleJobGenerator, ParticleRecoPartitionJobGenerator
             case "electron": return ElectronStrategy(), ParticleJobGenerator, ParticleRecoPartitionJobGenerator
+            case "muon": return MuonStrategy(), ParticleJobGenerator, ParticleRecoPartitionJobGenerator
             case "ghost": return GhostStrategy(), GhostJobGenerator, GhostRecoPartitionJobGenerator
             case _: raise ValueError(f"Species {species} PIDCalib2 strategy missing or not recognised. Allowed values: ['pion', 'proton', 'kaon', 'electron', 'ghost']")
 
     def _validate_species(self):
         """Ensure species in the configuration file are valid."""
-        allowed_species = {"kaon", "pion", "proton", "electron", "ghost"}
+        allowed_species = {"kaon", "pion", "proton", "electron", "muon", "ghost"}
         for species_id in self.species.keys():
             if species_id not in allowed_species:
                 raise ValueError(f"Invalid species: {species_id}. Must be one of {allowed_species}.")

@@ -7,7 +7,7 @@ user_id: "bldelane" # CERN user ID for kinit @CERN.CH
 # test-run flag
 # =============
 # if true, run pidcalib in `--test` mode
-max_calib_files: 3 # how many calibration samples to run over in pidcalib [applies only if test is True]
+max_calib_files: 25 # how many calibration samples to run over in pidcalib [applies only if test is True]
 # if true, produce all run info, including the path to calibration samples, TDirectiory and TTree
 verbose: True 
 
@@ -20,18 +20,22 @@ pid:
   
   # alias : list[float, ...]
   sweight_binning:
-    "Brunel_P"       : [10_000, 20_000, 30_000, 40_000, 100_000]
-    "Brunel_ETA"     : [1.5, 3.0, 5.5]  
-    "nTracks_Brunel" : [0, 250, 1000] 
+    "Brunel_P"       : [10_000, 15_000, 20_000, 30_000, 50_000, 100_000]
+    "Brunel_ETA"     : [1.5, 2.5, 5.]  
+    "nTracks_Brunel" : [0, 225, 500] 
   
   pid_extrap_binning:
-    "Brunel_P"       : [10_000, 15_000, 20_000,25_000, 30_000, 40_000, 100_000]
-    "Brunel_ETA"     : [1.5, 3.0, 5.5]  
-    "nTracks_Brunel" : [0, 250, 500, 1000] 
-  
+    # "Brunel_P"       : [10000., 12000., 13200., 15600., 19000., 24400., 29800., 35200., 46000., 51400., 56800., 62200., 67600., 73000., 78400., 83800., 89200., 94600., 100000.] 
+    # "Brunel_ETA"     : [1.5, 1.9735, 2.375, 2.8125, 3.25, 3.6875, 4.125, 4.5625, 5.]  
+    # "nTracks_Brunel" : [0, 225, 500] 
+    "Brunel_P"       : [10_000, 15_000, 20_000, 30_000, 50_000, 100_000]
+    "Brunel_ETA"     : [1.5, 2.5, 5.]  
+    "nTracks_Brunel" : [0, 225, 500] 
+
   # what species are considered in the makeup of the misID?
   # NOTE: take care to specify the species alias employed in pidcalib2
   species: 
+    muon    : "Mu"
     kaon    : "K"
     pion    : "Pi"
     proton  : "P"
@@ -41,16 +45,15 @@ pid:
   year: "2018" 
   magpol: "up" # follow pidcalib2 syntax
   
+  # =====================================================================================
   # PIDCALIB section: adopt pidcalib syntax to extract efficiencies from calibration data
   # =====================================================================================
   
   # SELECTIONS [use pidcalib2 syntax]
   # ---------------------------------
-  # muon-specific PID selection to isolate the single-track hadron-enriched data 
-  control: "_ProbNNghost<0.1 & DLLmu<0.0 & IsMuon==0.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2
-
-  # muon-specific PID selection in the signal-fit region  
-  target: "_ProbNNghost<0.1 & DLLmu>3.0 & IsMuon==1.0 & probe_hasMuon==1.0 & InMuonAcc==1.0" # arg to `--pid_cut` option in pidcalib2 
+  control: "ProbNNghost<0.1 & DLLK>-5 & DLLK<0 & HasRich & ProbNNk<0.2" # arg to `--pid_cut` option in pidcalib2
+  #target: "ProbNNghost<0.1 & DLLK>3.0 & HasRich & ProbNNk>0.5" # arg to `--pid_cut` option in pidcalib2 
+  target: "ProbNNghost<0.1 & DLLK>-5 & DLLK<0 & HasRich & ProbNNk<0.2" # arg to `--pid_cut` option in pidcalib2
 
   # selection shared between the hadron-enriched and signal samples. 
   # usually involving acceptance cuts, and the extrema of the mommentum range established in nominal events selection
@@ -59,33 +62,17 @@ pid:
 
   # pidcalib cuts of HE sample to define the reco partitions
   reco_partitions:
-    kaon_like      : "DLLK>0.0 & (DLLK-DLLp)>0.0 & (DLLK-DLLe)>0.0"
-    pion_like      : "DLLK<0.0 & DLLp<0.0 & DLLe<0.0"
-    proton_like    : "DLLp>0.0 & (DLLp-DLLK)>0.0 & (DLLp-DLLe)>0.0"
-    electron_like  : "DLLe>0.0 & (DLLe-DLLK)>0.0 & (DLLe-DLLp)>0.0"
+    muon_like      : "DLLmu>0.0 & (DLLmu-DLLp)>0.0 & (DLLmu-DLLe)>0.0 & (DLLmu-DLLK)>0.0"
+    kaon_like      : "DLLK>0.0 & (DLLK-DLLp)>0.0 & (DLLK-DLLe)>0.0 & (DLLK-DLLmu)>0.0"
+    pion_like      : "DLLmu<0.0 & DLLp<0.0 & DLLe<0.0 & DLLK<0.0"
+    proton_like    : "DLLp>0.0 & (DLLp-DLLmu)>0.0 & (DLLp-DLLe)>0.0 & (DLLp-DLLK)>0.0"
+    electron_like  : "DLLe>0.0 & (DLLe-DLLmu)>0.0 & (DLLe-DLLp)>0.0 & (DLLe-DLLK)>0.0"
     # # define `ghost-like` the partition evading all the above, in a slight abuse of notation
     #ghost_like: "((DLLK < 0) | (DLLK == 0) | (DLLK - DLLp < 0) | (DLLK - DLLp == 0) | (DLLK - DLLe < 0) | (DLLK - DLLe == 0)) & ((DLLK > 0) | (DLLK == 0) | (DLLp > 0) | (DLLp == 0) | (DLLe > 0) | (DLLe == 0)) & ((DLLp < 0) | (DLLp == 0) | (DLLp - DLLK < 0) | (DLLp - DLLK == 0) | (DLLp - DLLe < 0) | (DLLp - DLLe == 0)) & ((DLLe < 0) | (DLLe == 0) | (DLLe - DLLK < 0) | (DLLe - DLLK == 0) | (DLLe - DLLp < 0) | (DLLe - DLLp == 0))"
 
   # ghosts section [optional, but nessary if `ghost-like` if not None]
   # --------------
   ghost_config: ~
-  # ghost_config: 
-  #   path: "root://eoslhcb.cern.ch//eos/lhcb/wg/semileptonic/Bc2D0MuNuX/ntuples/v4/MC/D0MuNu/2018/MU/MC_Bc2D0MuNu_2018_MU_pidgen.root"
-  #   key: None
-  #   tree: "DecayTree"
-  #   # PID-less selection mimicking the hadron-enriched data selection -- PID excluded to be able to extract all necessary PID efficiencies 
-  #   hadron_enriched_sel: "( B_plus_L0Global_TIS ) & \
-  #     ( ( (B_plus_Hlt1TwoTrackMVADecision_TOS) | (B_plus_Hlt1TrackMuonMVADecision_TOS) | (B_plus_Hlt1TrackMVADecision_TOS) | (B_plus_Hlt1TrackMuonDecision_TOS) ) | (B_plus_Hlt1TrackAllL0Decision_TOS ) ) &\
-  #     ( ( (B_plus_Hlt2Topo2BodyDecision_TOS) | (B_plus_Hlt2Topo3BodyDecision_TOS) | (B_plus_Hlt2Topo4BodyDecision_TOS) | (B_plus_Hlt2TopoMu2BodyDecision_TOS) | (B_plus_Hlt2TopoMu3BodyDecision_TOS) | (B_plus_Hlt2TopoMu4BodyDecision_TOS) ) | ( (B_plus_Hlt2Topo2BodyBBDTDecision_TOS) | (B_plus_Hlt2Topo3BodyBBDTDecision_TOS) | (B_plus_Hlt2Topo4BodyBBDTDecision_TOS) | (B_plus_Hlt2TopoMu2BodyBBDTDecision_TOS) | (B_plus_Hlt2TopoMu3BodyBBDTDecision_TOS) | (B_plus_Hlt2TopoMu4BodyBBDTDecision_TOS) ) | ( (B_plus_Hlt2SingleMuonDecision_TOS) ) ) & \
-  #     ( (K_minus_PIDK>3) & (Pi_1_PIDK<0) ) & \
-  #     ( (K_minus_hasRich==True) & (Pi_1_hasRich==True) & (K_minus_isMuon==False) & (Pi_1_isMuon==False) ) & \
-  #     ( (Mu_plus_IPCHI2_OWNPV>16) & (Pi_1_IPCHI2_OWNPV>16) & (K_minus_IPCHI2_OWNPV>16) ) & \
-  #     ( (Mu_plus_PT>1500) & (Mu_plus_P>10e3) & (Mu_plus_P<100e3) & (D0_M>1790) & (D0_M<1940) & (K_minus_P<100e3) & (Pi_1_P<100e3) ) & \
-  #     ( (B_plus_ENDVERTEX_Z-B_plus_PV_Z)>0 ) & \
-  #     ( (D0_FDCHI2_OWNPV>0) & (B_plus_IPCHI2_OWNPV>0) & (B_plus_FDCHI2_OWNPV>0) ) & \
-  #     ( Mu_plus_NShared==0 ) & \
-  #     ( (Mu_plus_TRUEID==0) & (B_plus_TRUEID==0) & (B_plus_BKGCAT==60) )" # PDG numbering scheme and https://lhcb-doxygen.web.cern.ch/lhcb-doxygen/davinci/latest/df/d88/class_i_background_category.html for ghosts
-  #   branch_prefix: "Mu_plus" # in converting the (anti)muon_id cuts above, I must establish the branch prefix for specific to the ghost ntuple
 
 
 # =============================================================================================================================
@@ -94,7 +81,7 @@ pid:
 data: 
   # file/directory/tree coordinates
   # ------------------------------ 
-  input_path: "/ceph/submit/data/user/b/blaised/trex/hadron_enriched/butojpsik_mm_data_MU_2018.root" # path to hadron-enriched data file (pid + intermediate selection applied)
+  input_path: "/ceph/submit/data/user/b/blaised/trex4ddmisid/control/butojpsik_mm_data_MU_2018.root" # path to hadron-enriched data file (pid + intermediate selection applied)
   data_key: ~
   data_tree: "DecayTree"
   output_path: "/work/submit/blaised/DDmisID/misid_w/fakemuon_2018_MU.root" # path to hadron-enriched data file (pid + intermediate selection applied)
@@ -109,9 +96,10 @@ data:
   # NOTE: follow awkward syntax: each selection cut enclosed by a set of brackets
   # -----------------------------------------------------------------------------
   data_reco_partitions: 
-    kaon      : "(Kplus_LOKI_PP_InAccMuon==1.0) & (Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDmu<0.0) & (Kplus_isMuon==0) & (Kplus_hasMuon==1.0) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDK>0.0) & ( (Kplus_PIDK-Kplus_PIDp)>0.0 ) & ( (Kplus_PIDK-Kplus_PIDe)>0.0 )"
-    pion      : "(Kplus_LOKI_PP_InAccMuon==1.0) & (Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDmu<0.0) & (Kplus_isMuon==0) & (Kplus_hasMuon==1.0) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDK<0.0) & (Kplus_PIDp<0.0) & (Kplus_PIDe<0.0)"
-    proton    : "(Kplus_LOKI_PP_InAccMuon==1.0) & (Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDmu<0.0) & (Kplus_isMuon==0) & (Kplus_hasMuon==1.0) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDp>0.0) & ( (Kplus_PIDp-Kplus_PIDK)>0.0 ) & ( (Kplus_PIDp-Kplus_PIDe)>0.0 )"
-    electron  : "(Kplus_LOKI_PP_InAccMuon==1.0) & (Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDmu<0.0) & (Kplus_isMuon==0) & (Kplus_hasMuon==1.0) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDe>0.0) & ( (Kplus_PIDe-Kplus_PIDK)>0.0 ) & ( (Kplus_PIDe-Kplus_PIDp)>0.0 )"
-    # NOTE: I decided to absorb any residual candidates in the data in a `ghost` partition defined containing candidates evading the above; below, what I would write to match the string passed to pidcalib2. Both approaches yeild the same result as verified on 2018 MU data. 
-    #ghost     : "(Kplus_InMuonAcc==1.0) & (Kplus_NShared==0) & (Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>1500) & (Kplus_PIDmu<0.0) & (Kplus_isMuon==0) & (Kplus_hasMuon==1.0) & (Kplus_ProbNNghost<0.1) & ( ((Kplus_PIDK < 0) | (Kplus_PIDK == 0) | (Kplus_PIDK - Kplus_PIDp < 0) | (Kplus_PIDK - Kplus_PIDp == 0) | (Kplus_PIDK - Kplus_PIDe < 0) | (Kplus_PIDK - Kplus_PIDe == 0)) & ((Kplus_PIDK > 0) | (Kplus_PIDK == 0) | (Kplus_PIDp > 0) | (Kplus_PIDp == 0) | (Kplus_PIDe > 0) | (Kplus_PIDe == 0)) & ((Kplus_PIDp < 0) | (Kplus_PIDp == 0) | (Kplus_PIDp - Kplus_PIDK < 0) | (Kplus_PIDp - Kplus_PIDK == 0) | (Kplus_PIDp - Kplus_PIDe < 0) | (Kplus_PIDp - Kplus_PIDe == 0)) & ((Kplus_PIDe < 0) | (Kplus_PIDe == 0) | (Kplus_PIDe - Kplus_PIDK < 0) | (Kplus_PIDe - Kplus_PIDK == 0) | (Kplus_PIDe - Kplus_PIDp < 0) | (Kplus_PIDe - Kplus_PIDp == 0)) )"
+    muon      : "(Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDK>-5) & (Kplus_PIDK<0.0) & (Kplus_ProbNNk<0.2) & (Kplus_hasRich==1) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDmu>0.0) & ( (Kplus_PIDmu-Kplus_PIDp)>0.0 ) & ( (Kplus_PIDmu-Kplus_PIDe)>0.0) & ((Kplus_PIDmu-Kplus_PIDK)>0.0)"
+    kaon      : "(Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDK>-5) & (Kplus_PIDK<0.0) & (Kplus_ProbNNk<0.2) & (Kplus_hasRich==1) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDK>0.0) & ( (Kplus_PIDK-Kplus_PIDp)>0.0 ) & ( (Kplus_PIDK-Kplus_PIDe)>0.0) & ((Kplus_PIDK-Kplus_PIDmu)>0.0)"
+    pion      : "(Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDK>-5) & (Kplus_PIDK<0.0) & (Kplus_ProbNNk<0.2) & (Kplus_hasRich==1) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDmu<0.0) & (Kplus_PIDp<0.0) & (Kplus_PIDe<0.0) & (Kplus_PIDK<0.0)"
+    proton    : "(Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDK>-5) & (Kplus_PIDK<0.0) & (Kplus_ProbNNk<0.2) & (Kplus_hasRich==1) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDp>0.0) & ( (Kplus_PIDp-Kplus_PIDmu)>0.0 ) & ( (Kplus_PIDp-Kplus_PIDe)>0.0) & ((Kplus_PIDp-Kplus_PIDK)>0.0)"
+    electron  : "(Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDK>-5) & (Kplus_PIDK<0.0) & (Kplus_ProbNNk<0.2) & (Kplus_hasRich==1) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDe>0.0) & ( (Kplus_PIDe-Kplus_PIDmu)>0.0 ) & ( (Kplus_PIDe-Kplus_PIDp)>0.0) & ((Kplus_PIDe-Kplus_PIDK)>0.0)"
+    # # NOTE: I decided to absorb any residual candidates in the data in a `ghost` partition defined containing candidates evading the above; below, what I would write to match the string passed to pidcalib2. Both approaches yeild the same result as verified on 2018 MU data. 
+    # #ghost     : "(Kplus_InMuonAcc==1.0) & (Kplus_NShared==0) & (Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>1500) & (Kplus_PIDmu<0.0) & (Kplus_isMuon==0) & (Kplus_hasMuon==1.0) & (Kplus_ProbNNghost<0.1) & ( ((Kplus_PIDK < 0) | (Kplus_PIDK == 0) | (Kplus_PIDK - Kplus_PIDp < 0) | (Kplus_PIDK - Kplus_PIDp == 0) | (Kplus_PIDK - Kplus_PIDe < 0) | (Kplus_PIDK - Kplus_PIDe == 0)) & ((Kplus_PIDK > 0) | (Kplus_PIDK == 0) | (Kplus_PIDp > 0) | (Kplus_PIDp == 0) | (Kplus_PIDe > 0) | (Kplus_PIDe == 0)) & ((Kplus_PIDp < 0) | (Kplus_PIDp == 0) | (Kplus_PIDp - Kplus_PIDK < 0) | (Kplus_PIDp - Kplus_PIDK == 0) | (Kplus_PIDp - Kplus_PIDe < 0) | (Kplus_PIDp - Kplus_PIDe == 0)) & ((Kplus_PIDe < 0) | (Kplus_PIDe == 0) | (Kplus_PIDe - Kplus_PIDK < 0) | (Kplus_PIDe - Kplus_PIDK == 0) | (Kplus_PIDe - Kplus_PIDp < 0) | (Kplus_PIDe - Kplus_PIDp == 0)) )"

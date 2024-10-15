@@ -10,6 +10,7 @@ from loguru import logger
 import os
 from config.calib_tuning import CalibSamples, MCTunings
 from ddmisid.utils.binning import DefaultBinningGenerator
+import re
 
 
 class JobWriterMixin:
@@ -120,14 +121,32 @@ class JobSetter(BaseJobGenerator, JobWriterMixin):
         script_path.parent.mkdir(parents=True, exist_ok=True)
         return script_path
 
-    def _fetch_calib_and_mctuning(self, species: str, year: str) -> tuple:
-        """Helper to fetch calibration sample and MC tuning."""
+    def _fetch_calib(self, species: str, year: str) -> tuple:
+        """Helper to fetch calibration sample."""
         calib_sample = CalibSamples().fetch(year=year, species=species)
+        return calib_sample
+
+
+class MCTuningSetterMixin:
+    """Mixin to parse the ProbbNN* variables, assigning the appropriate MC tuning."""
+
+    @staticmethod
+    def assign_mc_tuning(year: str, pid_selection: str) -> str:
+        """Assign the appropriate MC tuning prefix based on the year of data taking."""
         mc_tuning = MCTunings().fetch(year=year)
-        return calib_sample, mc_tuning
+
+        # Define a regex pattern to find all occurrences of "ProbNN" followed by any characters (e.g., ProbNNghost, ProbNNmu)
+        pattern = r"ProbNN\w*"
+
+        # Replace all occurrences of ProbNN* with the appropriate MC tuning value
+        pid_selection = re.sub(
+            pattern, lambda match: f"{mc_tuning}_{match.group()}", pid_selection
+        )
+
+        return pid_selection
 
 
-class ParticleJobGenerator(JobSetter):
+class ParticleJobGenerator(JobSetter, MCTuningSetterMixin):
     """
     concrete implementation of job script generator to extract efficiencies related to the pid selections defining control and target.
     specific to particles, hence the compliance with pidcalib2 directives.
@@ -145,17 +164,18 @@ class ParticleJobGenerator(JobSetter):
         species_alias = self.strategy.get_species_alias()
 
         # Fetch calibration sample and MC tuning
-        calib_sample, mc_tuning = self._fetch_calib_and_mctuning(species, year)
+        calib_sample = self._fetch_calib(species, year)
 
         # Iterate over regions (control/target) to generate jobs
         for region in region_id:
 
             # Set PID cuts based on the region
-            pid_cut = (
-                f"{mc_tuning}{self.control_pid_selection}"
+            raw_pid_selection = (  # user defined; might need to have mctunings assigned if featuring ProbNN vars
+                f"{self.control_pid_selection}"
                 if region == "control"
-                else f"{mc_tuning}{self.target_pid_selection}"
+                else f"{self.target_pid_selection}"
             )
+            pid_cut = self.assign_mc_tuning(year=year, pid_selection=raw_pid_selection)
 
             # Setup binning variables
             binning_vars, binning_path = self._setup_binning(
@@ -185,7 +205,7 @@ class ParticleJobGenerator(JobSetter):
             self._write_job_script(script_path, job_conf)
 
 
-class ParticleRecoPartitionJobGenerator(JobSetter):
+class ParticleRecoPartitionJobGenerator(JobSetter, MCTuningSetterMixin):
     """
     Cconcrete implementation of job script generator to extract efficiencies related to the reco partitions within the control sample, eff(reco partition | control PID, kinematics, topology, occupancy).
     specific to particles, hence the compliance with pidcalib2 directives.
@@ -202,15 +222,16 @@ class ParticleRecoPartitionJobGenerator(JobSetter):
         species_alias = self.strategy.get_species_alias()
 
         # Fetch calibration sample and MC tuning
-        calib_sample, mc_tuning = self._fetch_calib_and_mctuning(species, year)
+        calib_sample = self._fetch_calib(species, year)
 
         # Iterate over reco partitions
         for partition_label, partition_pid_criteria in self.reco_partitions.items():
 
-            # Set PID cut for each partition
+            # Set PID cut for each partition, accounting for MC tuning setting, if needed
             pid_cut = partition_pid_criteria
-            hadron_enriched_selection = (
-                f"{mc_tuning}{self.control_pid_selection} & {self.common_selection}"
+            hadron_enriched_selection = self.assign_mc_tuning(
+                year=year,
+                pid_selection=f"{self.control_pid_selection} & {self.common_selection}",
             )
 
             # Setup binning variables

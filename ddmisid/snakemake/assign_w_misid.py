@@ -22,6 +22,7 @@ from itertools import product
 import boost_histogram as bh
 import hist
 from typing import Union, List, Dict
+from loguru import logger
 
 
 SPECIES = [
@@ -96,6 +97,7 @@ def register_pid_maps(
 
         if "mu" in key:
             pid_hist = load_hist(value)  # Load muon/antimuon PID efficiencies
+
             # Validate the binning before adding it to the container
             validate_n_axes(pid_hist, binning)
             validate_binning(pid_hist, binning)
@@ -104,83 +106,6 @@ def register_pid_maps(
             pid_container[key] = pid_hist
 
     return pid_container
-
-
-# def compute_misid_w_binwise(
-#     i: int,
-#     j: int,
-#     k: int,
-#     pid_effs: Dict[str, bh.Histogram],
-#     relative_yields: bh.Histogram,
-#     species: tuple = SPECIES,
-# ) -> [float, float]:
-#     """Exract the misID weight, assuming index order p, eta, ntracks [checks in place]"""
-
-#     # sanity
-#     print(relative_yields[i, j, k, ...])
-#     assert (
-#         abs(relative_yields[i, j, k, ...].sum().value - 1.0) < 1e-3
-#     ), f"Normalisation check fail: relative yields in bin ({i}, {j}, {k}) are incompatible with normalisation to unity and the 1e-3 level"
-
-#     # consistency check
-#     misid_w = 0.0
-#     for s in species:
-
-#         # fetch the factors in the species-specific contributions to the total misID weight, incorporating the respective uncertainties
-#         ni_nref = ufloat(
-#             relative_yields[i, j, k, f"{s}_yield"].value,
-#             relative_yields[i, j, k, f"{s}_yield"].variance ** 0.5,
-#         )
-#         num_pid_eff = ufloat(
-#             pid_effs[f"{s}_to_mu"][i, j, k].value,
-#             pid_effs[f"{s}_to_mu"][i, j, k].variance ** 0.5,
-#         )
-#         denom_pid_eff = ufloat(
-#             pid_effs[f"{s}_to_antimu"][i, j, k].value,
-#             pid_effs[f"{s}_to_antimu"][i, j, k].variance ** 0.5,
-#         )
-
-#         # species weight factor
-#         species_w = ni_nref * (1 / denom_pid_eff) * num_pid_eff
-
-#         # linear combination of species factors
-#         misid_w += species_w
-
-#     return misid_w.n, misid_w.s**2  # store variance by convention
-
-
-# def compute_misid_w_hist(
-#     pid_effs: Dict[str, bh.Histogram],
-#     relative_yields: bh.Histogram,
-#     species: tuple = SPECIES,
-# ) -> bh.Histogram:
-#     """Generate a lookup table for misid_w, indexed by kinematics and occupancy bin indices"""
-
-#     # sanity check: consistent structure among histograms
-#     for s in species:
-#         check_axes_match(
-#             relative_yields[..., -1],
-#             pid_effs[f"{s}_to_mu"],
-#             pid_effs[f"{s}_to_antimu"],
-#         )
-
-#     # book empty container (cval, std**2)
-#     misid_w_hist = bh.Histogram(
-#         *relative_yields[..., -1].axes, storage=bh.storage.Weight()
-#     )
-
-#     # RFE: this assumes 3 binning axes
-#     # fill
-#     for i, j, k in product(
-#         range(len(misid_w_hist.axes[0])),
-#         range(len(misid_w_hist.axes[1])),
-#         range(len(misid_w_hist.axes[2])),
-#     ):
-#         misid_w_hist[i, j, k] = compute_misid_w_binwise(
-#             i, j, k, pid_effs=pid_effs, relative_yields=relative_yields, species=species
-#         )
-
-#     return misid_w_hist
 
 
 def compute_misid_weight(
@@ -193,7 +118,7 @@ def compute_misid_weight(
 ) -> float:
     """Element-wise weight assignment, accounting for the fact that the per-species abundance and control- and signal-0 efficiecy maps may adopt different binning"""
     # validate binning of each
-    misid_w = 0.0
+    misid_w = ufloat(0.0, 0.0)
 
     for spc in species:
         # relative abundance
@@ -215,9 +140,14 @@ def compute_misid_weight(
         sig_pideff_v = ufloat(sig_pideff.value, sig_pideff.variance**0.5)
 
         # linear combination: species-abundance prefactor (+) unfold the control PID eff (+) fold in the signal PID eff
-        misid_w += sw_spc * (1 / ctrl_pideff_v) * sig_pideff_v
+        try:
+            misid_w += sw_spc * (1 / ctrl_pideff_v) * sig_pideff_v
+        except ZeroDivisionError:
+            logger.warning(
+                f"Division by zero encountered. ctrl_pideff_v: {ctrl_pideff_v}. Skipping this calculation."
+            )
 
-        return misid_w.n
+    return misid_w.n
 
 
 if __name__ == "__main__":
@@ -230,6 +160,7 @@ if __name__ == "__main__":
     parser.add_argument("--proton_to_mu", help="path to proton->mu eff", default=None)
     parser.add_argument("--pion_to_mu", help="path to pion->mu eff", default=None)
     parser.add_argument("--kaon_to_mu", help="path to kaon->mu eff", default=None)
+    parser.add_argument("--muon_to_mu", help="path to kaon->mu eff", default=None)
     parser.add_argument(
         "--electron_to_mu", help="path to electron->mu eff", default=None
     )
@@ -246,6 +177,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--kaon_to_antimu",
+        help="path to kaon->!mu eff [ie containted in hadron-enriched data]",
+        default=None,
+    )
+    parser.add_argument(
+        "--muon_to_antimu",
         help="path to kaon->!mu eff [ie containted in hadron-enriched data]",
         default=None,
     )
@@ -290,7 +226,6 @@ if __name__ == "__main__":
             key=config.data.data_key,
             tree=config.data.data_tree,
             library="pd",
-            max_events=1e6,
         )
     ).lazy()
 
@@ -309,4 +244,9 @@ if __name__ == "__main__":
     ).collect()  # materialise lazyframe to dataframe
 
     # write outfile anew to avoid issues with mis-matched updates (plays better with Bc2DMuNu analysis pipeline)ary port to pandas to exploit uproot ability to write out files
-    write_df(data_update.to_pandas(), opts.output, opts.key, opts.tree)
+    write_df(
+        data_update.to_pandas(),
+        path=config.data.output_path,
+        key=config.data.data_key,
+        treename=config.data.data_tree,
+    )

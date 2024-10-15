@@ -24,6 +24,11 @@ class ElectronStrategy(ParticleStrategy):
         super().__init__(config=config, species="electron")
 
 
+class MuonStrategy(ParticleStrategy):
+    def __init__(self, config=config):
+        super().__init__(config=config, species="muon")
+
+
 class GhostStrategy(BaseSpeciesStrategy):
     """Bespoke treatment for ghosts, using suitably-truthmatched user-specified simulation samples."""
 

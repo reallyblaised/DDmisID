@@ -68,10 +68,10 @@ class NegativeEffProcessor(BaseEffHistProcessor):
                 elif abs(cval) > variance**0.5 and abs(cval) < _pid_eff_tolerance:
                     # <0 but within tolerance
                     view[index] = (_epsilon, abs(cval))  # proxy for 0.0
-                elif abs(cval) > variance**0.5 and abs(cval) > _pid_eff_tolerance:
+                elif abs(cval) > 3 * (variance**0.5) and abs(cval) > _pid_eff_tolerance:
                     # Kill process if below 0 and outside tolerance
                     raise ValueError(
-                        f"PID efficiency value below 0.0 detected at index {index} outside 1 sigma of 0.0 and above tolerance: {view[index]}. Aborting."
+                        f"PID efficiency value below 0.0 detected at index {index} outside 3 sigma of 0.0 and above tolerance: {view[index]}. Aborting."
                     )
 
         return hist

@@ -44,6 +44,14 @@ class CalibSamples(YearMixin):
     hadron_2012: str = "21"
     hadron_2011: str = "21r1"
 
+    # muons, from calibration samples
+    muon_2018: str = "Turbo18"
+    muon_2017: str = "Turbo17"
+    muon_2016: str = "Turbo16"
+    muon_2015: str = "Turbo15"
+    muon_2012: str = "21"
+    muon_2011: str = "21r1"
+
     # electrons, from calibration samples
     e_2018: str = "Electron18"
     e_2017: str = "Electron17"
@@ -82,6 +90,8 @@ class CalibSamples(YearMixin):
         match species:
             case "hadron" | "pion" | "kaon" | "proton":
                 calib_sample_key = f"hadron_{year}"
+            case "muon":
+                calib_sample_key = f"muon_{year}"
             case "e" | "electron":
                 calib_sample_key = f"e_{year}"
             case _:
