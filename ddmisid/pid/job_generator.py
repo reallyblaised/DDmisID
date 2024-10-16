@@ -146,7 +146,28 @@ class MCTuningSetterMixin:
         return pid_selection
 
 
-class ParticleJobGenerator(JobSetter, MCTuningSetterMixin):
+class InclusiveControlPIDUpdateMixin:
+    """
+    Define control-like selection defined as the union of the reco partitions, conditioned on the PID criteria defining the control region.
+    This allows us to account for the fact a subset of the control-sample data might elude the reco partitions.
+    """
+
+    def generate_reco_inclusive_control_pid_selection(self) -> str:
+        """
+        Control-like PID defined as the union of all control-conditioned reco partitions.
+        """
+        # Combine all reco partitions into one string joined by " | "
+        combined_reco_partitions = " | ".join(
+            f"({partition})" for partition in self.reco_partitions.values()
+        )
+
+        # Set control-like to include kinematic selections and the union of the reco partitions
+        return f"( ({self.control_pid_selection}) & ({combined_reco_partitions}) )"
+
+
+class ParticleJobGenerator(
+    JobSetter, MCTuningSetterMixin, InclusiveControlPIDUpdateMixin
+):
     """
     concrete implementation of job script generator to extract efficiencies related to the pid selections defining control and target.
     specific to particles, hence the compliance with pidcalib2 directives.
@@ -171,20 +192,30 @@ class ParticleJobGenerator(JobSetter, MCTuningSetterMixin):
 
             # Set PID cuts based on the region
             raw_pid_selection = (  # user defined; might need to have mctunings assigned if featuring ProbNN vars
-                f"{self.control_pid_selection}"
+                f"{self.generate_reco_inclusive_control_pid_selection()}"
                 if region == "control"
                 else f"{self.target_pid_selection}"
             )
             pid_cut = self.assign_mc_tuning(year=year, pid_selection=raw_pid_selection)
 
             # Setup binning variables
+            binning_scheme = (
+                self.sweight_binning
+                if region == "control"
+                else self.pid_extrap_binning  # replicate reco binning for unfolding the control PID eff; more granular transfer maps for target-sample PID to capture the PID efficiency evolution
+            )
+            binning_alias = (
+                "inclusive_control_binning"
+                if region == "control"
+                else "extrapolation_binning"
+            )
             binning_vars, binning_path = self._setup_binning(
                 species,
                 species_alias,
                 year,
                 output_dir,
-                self.pid_extrap_binning,
-                "extrapolation_binning",
+                binning_scheme,
+                binning_alias,
             )
 
             # Construct and write the executable jobsbash script
@@ -230,12 +261,12 @@ class ParticleRecoPartitionJobGenerator(JobSetter, MCTuningSetterMixin):
             # Set PID cut for each partition, accounting for MC tuning setting, if needed
             pid_cut = self.assign_mc_tuning(
                 year=year,
-                pid_selection=f"{partition_pid_criteria} & {self.control_pid_selection}",
+                pid_selection=f"{partition_pid_criteria}",
             )
             # common cuts for hadron-enriched sample
             hadron_enriched_selection = self.assign_mc_tuning(
                 year=year,
-                pid_selection=f"{self.common_selection}",
+                pid_selection=f"{self.control_pid_selection} & {self.common_selection}",
             )
 
             # Setup binning variables

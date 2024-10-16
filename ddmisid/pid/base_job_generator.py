@@ -13,7 +13,7 @@ class BaseJobGenerator(ABC):
         self._sweight_binning = config.pid.sweight_binning
         self._pid_extrap_binning = config.pid.pid_extrap_binning
         self._reco_partitions = config.pid.reco_partitions
-        self._control_pid_selection = self._generate_control_pid_selection(config)
+        self._control_pid_selection = config.pid.control
         self._target_pid_selection = config.pid.target
         self._common_selection = config.pid.common_selection
         self._verbose = config.verbose
@@ -25,17 +25,6 @@ class BaseJobGenerator(ABC):
     @property
     def pid_extrap_binning(self):
         return self._pid_extrap_binning
-
-    def _generate_control_pid_selection(self, config):
-        """
-        Generate the control_pid_selection by including the union of all reco partitions.
-        """
-        # Combine all reco partitions into one string joined by " | "
-        combined_reco_partitions = " | ".join(
-            f"({partition})" for partition in config.pid.reco_partitions.values()
-        )
-        # Set control-like to include kinematic selections and the union of the reco partitions
-        return f"( ({config.pid.control}) & ({combined_reco_partitions}) )"
 
     @property
     def control_pid_selection(self):

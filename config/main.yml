@@ -20,20 +20,22 @@ pid:
   
   # alias : list[float, ...]
   sweight_binning:
-    #"Brunel_P"       : [10_000, 15_000, 20_000, 30_000, 50_000, 100_000]
-    "Brunel_P"       : [10_000, 15_000, 20_000, 25_000, 50_000, 100_000]
-    "Brunel_ETA"     : [1.5, 3., 5.]  
-    "nTracks_Brunel" : [0, 150, 225, 1000] 
+    "Brunel_P"       : [10_000,12_000, 15_000, 17_500, 20_000, 25_000, 50_000, 100_000]
+    "Brunel_ETA"     : [1.5, 2.5, 5.5]  
+    "nTracks_Brunel" : [0, 1000] 
   
   pid_extrap_binning:
     # "Brunel_P"       : [10000., 12000., 13200., 15600., 19000., 24400., 29800., 35200., 46000., 51400., 56800., 62200., 67600., 73000., 78400., 83800., 89200., 94600., 100000.] 
-    "Brunel_ETA"     : [1.5, 1.9735, 2.375, 2.8125, 3.25, 3.6875, 4.125, 4.5625, 5.]  
-    "nTracks_Brunel" : [0, 150, 225, 1000] 
+    # "Brunel_ETA"     : [1.5, 1.9735, 2.375, 2.8125, 3.25, 3.6875, 4.125, 4.5625, 5.5]  
+    # "nTracks_Brunel" : [0, 150, 225, 1000] 
+    "Brunel_P"       : [10_000, 12_000, 15_000, 17_500, 20_000, 25_000, 50_000, 100_000]
+    "Brunel_ETA"     : [1.5, 2.5, 5.5]  
+    "nTracks_Brunel" : [0, 1000] 
   # what species are considered in the makeup of the misID?
   # NOTE: take care to specify the species alias employed in pidcalib2
   species: 
     muon    : "Mu"
-    # kaon    : "K"
+    kaon    : "K"
     pion    : "Pi"
     proton  : "P"
     electron: "e_B_Jpsi"
@@ -60,7 +62,7 @@ pid:
   # pidcalib cuts of HE sample to define the reco partitions
   reco_partitions:
     muon_like      : "DLLmu>0.0 & (DLLmu-DLLp)>0.0 & (DLLmu-DLLe)>0.0 & (DLLmu-DLLK)>0.0"
-    #kaon_like      : "DLLK>0.0 & (DLLK-DLLp)>0.0 & (DLLK-DLLe)>0.0 & (DLLK-DLLmu)>0.0"
+    kaon_like      : "DLLK>0.0 & (DLLK-DLLp)>0.0 & (DLLK-DLLe)>0.0 & (DLLK-DLLmu)>0.0"
     pion_like      : "DLLmu<0.0 & DLLp<0.0 & DLLe<0.0 & DLLK<0.0"
     proton_like    : "DLLp>0.0 & (DLLp-DLLmu)>0.0 & (DLLp-DLLe)>0.0 & (DLLp-DLLK)>0.0"
     electron_like  : "DLLe>0.0 & (DLLe-DLLmu)>0.0 & (DLLe-DLLp)>0.0 & (DLLe-DLLK)>0.0"
@@ -93,10 +95,10 @@ data:
   # NOTE: follow awkward syntax: each selection cut enclosed by a set of brackets
   # -----------------------------------------------------------------------------
   data_reco_partitions: 
-    muon      : "(Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDK>-5) & (Kplus_PIDK<0.0) & (Kplus_ProbNNk<0.2) & (Kplus_hasRich==1) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDmu>0.0) & ( (Kplus_PIDmu-Kplus_PIDp)>0.0 ) & ( (Kplus_PIDmu-Kplus_PIDe)>0.0) & ((Kplus_PIDmu-Kplus_PIDK)>0.0)"
-    #kaon      : "(Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDK>-5) & (Kplus_PIDK<0.0) & (Kplus_ProbNNk<0.2) & (Kplus_hasRich==1) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDK>0.0) & ( (Kplus_PIDK-Kplus_PIDp)>0.0 ) & ( (Kplus_PIDK-Kplus_PIDe)>0.0) & ((Kplus_PIDK-Kplus_PIDmu)>0.0)"
+    muon      : "(Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDK>-5) & (Kplus_PIDK<0.0) & (Kplus_ProbNNk<0.2) & (Kplus_hasRich==1) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDmu>0.0) & ((Kplus_PIDmu-Kplus_PIDp)>0.0) & ((Kplus_PIDmu-Kplus_PIDe)>0.0) & ((Kplus_PIDmu-Kplus_PIDK)>0.0)"
+    kaon      : "(Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDK>-5) & (Kplus_PIDK<0.0) & (Kplus_ProbNNk<0.2) & (Kplus_hasRich==1) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDK>0.0) & ( (Kplus_PIDK-Kplus_PIDp)>0.0 ) & ( (Kplus_PIDK-Kplus_PIDe)>0.0) & ((Kplus_PIDK-Kplus_PIDmu)>0.0)"
     pion      : "(Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDK>-5) & (Kplus_PIDK<0.0) & (Kplus_ProbNNk<0.2) & (Kplus_hasRich==1) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDmu<0.0) & (Kplus_PIDp<0.0) & (Kplus_PIDe<0.0) & (Kplus_PIDK<0.0)"
-    proton    : "(Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDK>-5) & (Kplus_PIDK<0.0) & (Kplus_ProbNNk<0.2) & (Kplus_hasRich==1) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDp>0.0) & ( (Kplus_PIDp-Kplus_PIDmu)>0.0 ) & ( (Kplus_PIDp-Kplus_PIDe)>0.0) & ((Kplus_PIDp-Kplus_PIDK)>0.0)"
-    electron  : "(Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDK>-5) & (Kplus_PIDK<0.0) & (Kplus_ProbNNk<0.2) & (Kplus_hasRich==1) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDe>0.0) & ( (Kplus_PIDe-Kplus_PIDmu)>0.0 ) & ( (Kplus_PIDe-Kplus_PIDp)>0.0) & ((Kplus_PIDe-Kplus_PIDK)>0.0)"
+    proton    : "(Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDK>-5) & (Kplus_PIDK<0.0) & (Kplus_ProbNNk<0.2) & (Kplus_hasRich==1) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDp>0.0) & ((Kplus_PIDp-Kplus_PIDmu)>0.0) & ((Kplus_PIDp-Kplus_PIDe)>0.0) & ((Kplus_PIDp-Kplus_PIDK)>0.0)"
+    electron  : "(Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>250) & (Kplus_PIDK>-5) & (Kplus_PIDK<0.0) & (Kplus_ProbNNk<0.2) & (Kplus_hasRich==1) & (Kplus_ProbNNghost<0.1) & (Kplus_PIDe>0.0) & ((Kplus_PIDe-Kplus_PIDmu)>0.0) & ((Kplus_PIDe-Kplus_PIDp)>0.0) & ((Kplus_PIDe-Kplus_PIDK)>0.0)"
     # # NOTE: I decided to absorb any residual candidates in the data in a `ghost` partition defined containing candidates evading the above; below, what I would write to match the string passed to pidcalib2. Both approaches yeild the same result as verified on 2018 MU data. 
     # #ghost     : "(Kplus_InMuonAcc==1.0) & (Kplus_NShared==0) & (Kplus_P>10000) & (Kplus_P<100000) & (Kplus_PT>1500) & (Kplus_PIDmu<0.0) & (Kplus_isMuon==0) & (Kplus_hasMuon==1.0) & (Kplus_ProbNNghost<0.1) & ( ((Kplus_PIDK < 0) | (Kplus_PIDK == 0) | (Kplus_PIDK - Kplus_PIDp < 0) | (Kplus_PIDK - Kplus_PIDp == 0) | (Kplus_PIDK - Kplus_PIDe < 0) | (Kplus_PIDK - Kplus_PIDe == 0)) & ((Kplus_PIDK > 0) | (Kplus_PIDK == 0) | (Kplus_PIDp > 0) | (Kplus_PIDp == 0) | (Kplus_PIDe > 0) | (Kplus_PIDe == 0)) & ((Kplus_PIDp < 0) | (Kplus_PIDp == 0) | (Kplus_PIDp - Kplus_PIDK < 0) | (Kplus_PIDp - Kplus_PIDK == 0) | (Kplus_PIDp - Kplus_PIDe < 0) | (Kplus_PIDp - Kplus_PIDe == 0)) & ((Kplus_PIDe < 0) | (Kplus_PIDe == 0) | (Kplus_PIDe - Kplus_PIDK < 0) | (Kplus_PIDe - Kplus_PIDK == 0) | (Kplus_PIDe - Kplus_PIDp < 0) | (Kplus_PIDe - Kplus_PIDp == 0)) )"

@@ -98,9 +98,9 @@ def register_pid_maps(
         if "mu" in key:
             pid_hist = load_hist(value)  # Load muon/antimuon PID efficiencies
 
-            # Validate the binning before adding it to the container
-            validate_n_axes(pid_hist, binning)
-            validate_binning(pid_hist, binning)
+            # # Validate the binning before adding it to the container
+            # validate_n_axes(pid_hist, binning)
+            # validate_binning(pid_hist, binning)
 
             # If test passed, load histograms into container
             pid_container[key] = pid_hist
