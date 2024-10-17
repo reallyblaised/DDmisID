@@ -267,7 +267,7 @@ class ParticleRecoPartitionJobGenerator(JobSetter, MCTuningSetterMixin):
             hadron_enriched_selection = self.assign_mc_tuning(
                 year=year,
                 pid_selection=f"{self.control_pid_selection} & {self.common_selection}",
-            )
+            )  # conditioed on P(i->!mu) => unfold per-species abundace, as observed in the fitted control sample (ie passing !mu PID criteria)
 
             # Setup binning variables
             binning_vars, binning_path = self._setup_binning(

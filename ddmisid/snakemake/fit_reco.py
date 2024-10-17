@@ -151,8 +151,8 @@ def build_channel_spec(
                     },
                     {
                         "name": "kaon_yield",
-                        "bounds": [[0.0, np.sum(observations)/4.]],
-                        "inits": [np.sum(observations)/100.0] # initialise at 1% of the data   
+                        "bounds": [[0.0, np.sum(observations)]],
+                        "inits": [np.sum(observations)/10.0] # initialise at 1% of the data   
                     },
                     {
                         "name": "pion_yield",

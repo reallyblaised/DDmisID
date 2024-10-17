@@ -141,7 +141,7 @@ def compute_misid_weight(
 
         # linear combination: species-abundance prefactor (+) unfold the control PID eff (+) fold in the signal PID eff
         try:
-            misid_w += sw_spc * (1 / ctrl_pideff_v) * sig_pideff_v
+            misid_w += sw_spc * (1.0 / ctrl_pideff_v) * sig_pideff_v
         except ZeroDivisionError:
             logger.warning(
                 f"Division by zero encountered. ctrl_pideff_v: {ctrl_pideff_v}. Skipping this calculation."
@@ -231,11 +231,11 @@ if __name__ == "__main__":
 
     # compute misID weights and store into new branch `misid_w`
     data_update = data.with_columns(
-        pl.struct(["Kplus_P", "Kplus_LOKI_ETA", "nTracks"])
+        pl.struct(["Mu_plus_P", "Mu_plus_LK_ETA", "nTracks"])
         .map_elements(
             lambda x: assign_misid_w(
-                p_val=x["Kplus_P"],
-                eta_val=x["Kplus_LOKI_ETA"],
+                p_val=x["Mu_plus_P"],
+                eta_val=x["Mu_plus_LK_ETA"],
                 ntracks_val=x["nTracks"],
             ),
             return_dtype=pl.Float64,
