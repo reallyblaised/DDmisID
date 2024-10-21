@@ -93,8 +93,7 @@ class DDmisIDConfig(BaseModel):
     user_id: str = Field(..., description="CERN user ID")
     max_calib_files: int = Field(
         ...,
-        ge=0,
-        description="Must be a non-negative integer specifying the number of calibration files [set to -1 for full set of calibration files]",
+        description="Must be a non-negative integer specifying the number of calibration files, or -1 for full set of calibration files",
     )
     verbose: bool = Field(..., description="Whether to produce verbose output")
     pid: PIDConfig = Field(..., description="PID configuration")
@@ -106,7 +105,7 @@ class DDmisIDConfig(BaseModel):
     # non-negative calib files read in from eos
     @validator("max_calib_files")
     def validate_max_calib_files(cls, v):
-        if v < 0:
+        if v < 0 and v != -1:  # allow -1 to signal full suite of calibration files
             raise ValueError("max_calib_files must be non-negative")
         return v
 

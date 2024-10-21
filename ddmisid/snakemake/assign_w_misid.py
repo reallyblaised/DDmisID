@@ -10,7 +10,7 @@ __author__ = "Blaise Delaney"
 __email__ = "blaise.delaney at cern.ch"
 
 import polars as pl
-from ddmisid.utils import load_root, load_hist, write_df
+from ddmisid.utils import load_root, load_hist, write_key_to_df
 from ddmisid.engine import config
 import argparse
 import numpy as np
@@ -244,8 +244,8 @@ if __name__ == "__main__":
     ).collect()  # materialise lazyframe to dataframe
 
     # write outfile anew to avoid issues with mis-matched updates (plays better with Bc2DMuNu analysis pipeline)ary port to pandas to exploit uproot ability to write out files
-    write_df(
-        data_update.to_pandas(),
+    write_key_to_df(
+        data=data_update.to_pandas(),
         path=config.data.output_path,
         key=config.data.data_key,
         treename=config.data.data_tree,

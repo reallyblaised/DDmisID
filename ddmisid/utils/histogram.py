@@ -12,6 +12,7 @@ from uncertainties import ufloat
 # Constants
 _pid_eff_tolerance = 0.1
 _epsilon = 1e-6
+_tolerance_sigmas = 3.0
 
 
 def load_hist(f: str) -> Union[Hist, bh.Histogram]:
@@ -68,10 +69,13 @@ class NegativeEffProcessor(BaseEffHistProcessor):
                 elif abs(cval) > variance**0.5 and abs(cval) < _pid_eff_tolerance:
                     # <0 but within tolerance
                     view[index] = (_epsilon, abs(cval))  # proxy for 0.0
-                elif abs(cval) > 3 * (variance**0.5) and abs(cval) > _pid_eff_tolerance:
+                elif (
+                    abs(cval) > _tolerance_sigmas * (variance**0.5)
+                    and abs(cval) > _pid_eff_tolerance
+                ):
                     # Kill process if below 0 and outside tolerance
                     raise ValueError(
-                        f"PID efficiency value below 0.0 detected at index {index} outside 3 sigma of 0.0 and above tolerance: {view[index]}. Aborting."
+                        f"PID efficiency value below 0.0 detected at index {index} outside {_tolerance_sigmas} sigma of 0.0 and above tolerance: {view[index]}. Aborting."
                     )
 
         return hist

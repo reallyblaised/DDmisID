@@ -20,18 +20,17 @@ from ddmisid.utils import EfficiencyHistogramProcessor, load_hist
 import pickle
 from loguru import logger as rule_logger
 from ddmisid.data_transforms import Discretiser
-from ddmisid.utils import load_root, update_write_df, write_df, simple_load, extract_sel_dict_branches
+from ddmisid.utils import load_root, write_df, simple_load, extract_sel_dict_branches
 from ddmisid.utils.binning import PIDCalibAliasFactory
 import numpy as np
 
 # cleanup after completion
 onsuccess: 
-    shutil.rmtree("workflow/snakemake/metadata")
-    shutil.rmtree("workflow/snakemake/log")
-    # shutil.rmtree("scratch/bin") # cleanup pidcalib efficiencies
-    # shutil.rmtree("scratch/obs") # cleanup data partitions
-    # shutil.rmtree("scratch/templates") # cleanup templates
-    # shutil.rmtree("scratch/postfit") # cleanup postfit data
+    shutil.rmtree("workflow/.snakemake/metadata")
+    shutil.rmtree("workflow/.snakemake/log")
+    shutil.rmtree("scratch") # cleanup pidcalib effs, obs, templates
+    shutil.rmtree(".schema") # reset engine
+    
 
 rule all:
     """Target of the entire DDmisID workflow"""

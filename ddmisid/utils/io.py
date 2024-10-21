@@ -233,94 +233,102 @@ def simple_load(
 def book_output_file(
     path: str,
     compression: uproot.compression.Compression = uproot.ZLIB(4),
+    preserve_existing_file: bool = False,
 ) -> uproot.WritableDirectory:
     """Book the output file with default compression ZLIB(4)
 
     Parameters
     ----------
     path : str
-        path to output file
+        Path to output file.
     compression : uproot.compression.Compression
-        compression algorithm to use (default ZLIB(4))
+        Compression algorithm to use (default ZLIB(4)).
+    preserve_existing_file : bool
+        If True, checks if the file exists and opens it without overwriting.
+        If False, will overwrite the file if it exists.
 
     Returns
     -------
-    outfile : uproot.rootio.ROOTDirectory
-        Path to output file
+    outfile : uproot.WritableDirectory
+        The output file.
     """
     outpath = Path(path)
     outpath.parent.mkdir(parents=True, exist_ok=True)
-    outfile = uproot.recreate(outpath.absolute(), compression=compression)
 
-    return outfile
+    if preserve_existing_file and outpath.exists():
+        print(f"File {outpath} already exists. Opening without overwriting.")
+        return uproot.update(outpath.absolute())  # Update mode
+    else:
+        print(f"Creating new file: {outpath}")
+        return uproot.recreate(outpath.absolute(), compression=compression)
 
 
-def update_write_df(
+def write_data_to_root(
     outfile: uproot.WritableDirectory,
-    data: pd.DataFrame | ak.Array,
-    key: str | None = None,
+    data: Union[pd.DataFrame, ak.Array],
+    key: Union[str, None] = None,
     treename: str = "DecayTree",
 ) -> None:
-    """Update a ROOT file to include the new data
+    """Helper function to write data into a ROOT file under a specified key and tree.
 
     Parameters
     ----------
+    outfile : uproot.WritableDirectory
+        Opened ROOT file ready for writing.
     data : pd.DataFrame | ak.Array
-        data to write out
-
-    outfile : uproot.rootio.ROOTDirectory
-        Booked outfile
-
-    key : str
-        name of the output directory
-
+        Data to write out.
+    key : str | None
+        Optional directory key to write the data.
     treename : str
-        name of the tree to write out
+        Name of the tree to write out.
     """
-    # handling the directory structure, if any
-    if key is not None:
-        outfile[f"{key}/{treename}"] = data
-        # display what we have written out
-        print(
-            f"Entries written to file {key}/{treename}: ",
-            outfile[f"{key}/{treename}"].num_entries,
+    full_path = f"{key}/{treename}" if key else treename
+
+    if full_path in outfile.keys():
+        raise ValueError(
+            f"Tree '{full_path}' already exists. Choose a different name or key."
         )
 
-    else:
-        outfile[f"{treename}"] = data
-        # display what we have written out
-        print(
-            f"Entries written to file DecayTree: ",
-            outfile[f"{treename}"].num_entries,
-        )
+    outfile[full_path] = data
+    print(f"Entries written to {full_path}: {outfile[full_path].num_entries}")
 
 
 def write_df(
-    data: pd.DataFrame | ak.Array,
+    data: Union[pd.DataFrame, ak.Array],
     path: str,
-    key: str | None = None,
+    key: Union[str, None] = None,
     treename: str = "DecayTree",
+    preserve_existing_file: bool = False,
 ) -> None:
-    """Write anew (recreate) the dataframe to a ROOT file
+    """Write or update a ROOT file with the given data.
 
     Parameters
     ----------
     data : pd.DataFrame | ak.Array
-        data to write out
-
+        Data to write out.
     path : str
-        path to output file
-
-    key : str
-        name of the output directory
-
+        Path to output file.
+    key : str | None
+        Name of the output directory (optional).
     treename : str
-        name of the tree to write out
+        Name of the tree to write out.
+    preserve_existing_file : bool
+        If True, opens an existing file and adds new content without overwriting.
     """
-    # book output file
-    outfile = book_output_file(path)
-    # write anew
-    update_write_df(outfile, data, key, treename)
+    # Book output file, with optional overwrite behavior
+    outfile = book_output_file(path, preserve_existing_file=preserve_existing_file)
+    # Write the data
+    write_data_to_root(outfile, data, key, treename)
+
+
+def write_key_to_df(
+    data: Union[pd.DataFrame, ak.Array],
+    path: str,
+    key: str = None,
+    treename: str = "DecayTree",
+) -> None:
+    """Alias for updating an existing ROOT file and adding new content in a specified key."""
+    write_df(data, path, key, treename, preserve_existing_file=True)
 
 
 def extract_sel_dict_branches(selection_dict: dict) -> list:

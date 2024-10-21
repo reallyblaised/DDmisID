@@ -22,12 +22,13 @@ pid:
   sweight_binning:
     "Brunel_P"       : [10_000,12_500, 15_000, 17_500, 20_000, 25_000, 50_000, 100_000]
     "Brunel_ETA"     : [1.5, 2.5, 5.5]  
-    "nTracks_Brunel" : [0, 1000] 
+    "nTracks_Brunel" : [0, 250, 1000] 
   
   pid_extrap_binning:
-    "Brunel_P"       : [10_000, 12_500, 15_000, 17_500, 20_000, 25_000, 50_000, 100_000]
-    "Brunel_ETA"     : [1.5, 2.5, 5.5]  
-    "nTracks_Brunel" : [0, 1000] 
+    "Brunel_P"       : [10_000, 12_500, 15_000, 17_500, 20_000, 22_500, 25_000, 50_000, 100_000]
+    "Brunel_ETA"     : [1.5, 2.5, 3.5, 5.5]  
+    "nTracks_Brunel" : [0, 250, 1000] 
+    
   # what species are considered in the makeup of the misID?
   # NOTE: take care to specify the species alias employed in pidcalib2
   species: 
