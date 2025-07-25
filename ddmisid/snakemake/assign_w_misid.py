@@ -6,9 +6,6 @@ Assign the w_misid weight following the main equation
 following SLB WG methodology; see LHCb-ANA-2021-052
 """
 
-__author__ = "Blaise Delaney"
-__email__ = "blaise.delaney at cern.ch"
-
 import polars as pl
 from ddmisid.utils import load_root, load_hist, write_key_to_df
 from ddmisid.engine import config
